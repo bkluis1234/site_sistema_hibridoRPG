@@ -12,6 +12,12 @@ dotenv({
 });
 import { z } from "zod";
 const envSchema = z.object({
+  PORTRAIT_MAX_BYTES: z.coerce
+    .number()
+    .int()
+    .min(102400)
+    .max(10485760)
+    .default(5242880),
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),

@@ -1,18 +1,17 @@
-# Dados necessários para a etapa 2
+# Referências recebidas e conferências pendentes
 
-Nenhum Manual Híbrido 2.6 ou imagem da ficha oficial estava anexado/disponível nesta sessão. A interface usa a descrição de terror/sobrevivência fornecida, sem presumir fidelidade gráfica à ficha. Não foram usados manuais de Tormenta20 ou Ordem Paranormal.
+A imagem oficial foi fornecida na Parte 2 e utilizada como referência visual. O texto da Parte 2 trouxe atributos, fórmulas, perícias, inventário, recursos, condições e decisões de PE. Essas instruções explícitas foram implementadas e documentadas em REGRAS_RPG.md.
 
-Para implementar as mecânicas, fornecer a versão oficial do manual com identificação de edição/erratas e confirmar com Marcus:
+O Manual Híbrido 2.6 completo continua ausente. Não foi inventada nenhuma mecânica de Tormenta20 ou Ordem Paranormal. Antes da homologação final, confirmar com Marcus:
 
-- Nomes e limites dos atributos, distribuição inicial, custo e evolução.
-- Recursos existentes, fórmulas de máximos/derivados, arredondamentos e exceções; comportamento ao reduzir máximo ou atingir zero.
-- Lista de perícias, vínculos com atributos, treinamento, modificadores e cálculo exato dos alvos.
-- Regras de criação e finalização, campos obrigatórios e exemplos de fichas válidas/inválidas.
-- Inventário, quantidades, capacidade/peso, dinheiro e regras de uso/consumo.
-- Equipamentos/armas, campos necessários, dano e demais cálculos, sem inferir atributos de outro sistema.
-- Condições físicas, ferimentos, duração, acumulação e recuperação.
-- Quais campos o jogador pode mudar durante a sessão e quais exigem aprovação do GM.
-- Regras de evolução, manutenção de fichas antigas e migração entre versões.
-- Pelo menos três exemplos completos calculados pelo mestre e casos de limite/empate/arredondamento.
+- Fidelidade integral das fórmulas e eventuais erratas.
+- Interpretação de no máximo um atributo reduzido a zero.
+- Lista inicial de fadiga: Atletismo, Acrobacia, Furtividade, Luta, Reflexos. O proprietário solicitou aplicação automática e lista configurável, mas a proposta ainda depende da revisão de Marcus.
+- Quantificação de deslocamento reduzido e recuperação incompleta de PE em fadiga 3.
+- Danos de armas/custos de objetos: 1d4/1d6/1d8 permanecem propostas; não há atribuição automática.
+- Detalhes do teste de VIG/Fortitude em dano de ataque único. O sistema apenas alerta; não presume acerto ou aplica ferimento.
+- Reentrada em crítico, novo dano após estabilização, cura e tratamento da morte; atualmente só há o acompanhamento explícito fornecido.
+- Política de exceções de carga/máximos e aprovação mecânica da Parte 3.
+- Exemplos completos de fichas/testes aprovados por Marcus para conferência independente das instruções.
 
-A imagem oficial permitirá ajustar hierarquia, tipografia, disposição dos blocos e paleta. Ações reais continuarão sendo componentes HTML interativos e acessíveis, não uma imagem estática.
+Retrato necessita um provedor de storage persistente antes de salvar imagem. Repositório remoto privado e infraestrutura de produção também continuam pendentes.

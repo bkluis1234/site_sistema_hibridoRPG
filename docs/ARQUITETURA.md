@@ -22,7 +22,7 @@ Os 17 modelos solicitados e privilege_invites estão no schema. Audit logs são 
 - GlobalRole: ADMIN ou PLAYER. O ADMIN continua podendo criar personagens próprios.
 - `canCreateCampaigns`: habilitação global de criação, concedida por convite de mestre ou CLI do ADMIN inicial.
 - CampaignMember.role: GM ou PLAYER por campanha. Habilitação global não autoriza ler/editar fichas de todas as campanhas.
-- Etapa 1: só o dono consulta/edita identidade. Nem ADMIN acessa fichas de terceiros por essas rotas. Acesso de GM/compartilhamento será aberto na etapa 3 com testes entre campanhas.
+- Rotas legadas mantêm propriedade. Rotas detalhadas da Parte 2 autorizam dono ou GM vinculado à campanha ativa. ADMIN sem vínculo não acessa fichas de terceiros. Compartilhamento com colegas/painel de campanhas permanecem na Parte 3.
 - DTOs estritos não aceitam ownerId, role, status, atributos ou permissões vindos do navegador.
 - Projeções explícitas evitam envio de passwordHash, recovery_codes e hashes de convites. Segredos futuros do mestre exigirão projeções diferentes e testes de ausência de campos.
 
@@ -46,8 +46,17 @@ Primeiro ADMIN: CLI em terminal seguro, senha oculta, bootstrapKey única para i
 
 PATCH usa versão enviada pelo formulário e WHERE id/ownerId/version. Somente um UPDATE vence. Incremento e log pertencem à mesma transação. Um 409 não substitui o texto local; UI permite copiar e carregar a versão do servidor explicitamente. Leitura indica carregado, não salvo. Persistência confirmada aparece só no onSuccess do PATCH.
 
-Não há autosave, fila offline ou sincronização em tempo real. Refetch ao focar/recarregar consulta o MySQL; mudanças locais sujas não são substituídas pelo refetch. Antes de fechar/recarregar com alterações existe aviso do navegador. Ainda falta bloqueio de navegação interna com alterações locais; o formulário não persiste texto depois de sair ou encerrar o navegador.
+A Parte 2 implementa autosave textual com debounce de 850 ms e operações imediatas por domínio. Rascunhos textuais não confirmados ficam em memória por conta/ficha; navegação interna preserva esse estado, e fechar/recarregar exibe aviso. Não há fila offline persistente nem sincronização em tempo real. Limites e controle de versões independentes estão em FICHA_DIGITAL.md.
 
 ## Limites antes da produção
 
-HTTPS/TLS reais, banco gerenciado, restauração, carga, acessibilidade completa e browsers adicionais precisam ser verificados em staging. Backups e monitoramento não são criados pela existência de docs. Ainda faltam gestão completa de contas, campanhas e aprovações. Mecânicas estão bloqueadas até receber o manual e exemplos de Marcus.
+HTTPS/TLS reais, banco gerenciado, restauração, carga, acessibilidade completa e browsers adicionais precisam ser verificados em staging. Backups e monitoramento não são criados pela existência de docs. Ainda faltam gestão completa de contas, campanhas e aprovações. Mecânicas explícitas da Parte 2 foram implementadas; o manual completo e exemplos homologados por Marcus continuam pendentes.
+
+
+## Ampliação da Parte 2
+
+Ficha, regras e API foram acrescentadas sem recriar a autenticação. sheet-routes.ts valida DTOs e sheet-service.ts autoriza/serializa transações. Cada domínio tem versão independente e Character.version mantém a sequência de auditoria. operationId/requestHash preserva idempotência e protege gasto duplo. CSRF no navegador usa inicialização compartilhada entre requests simultâneos.
+
+As rotas detalhadas autorizam proprietário ou GM de campanha ativa, nunca ADMIN universal. Só GM vinculado configura política de fadiga e autoriza repetição contextual. Operações legadas permanecem limitadas ao proprietário. Não há endpoint público de aprovação definitiva.
+
+Novas tabelas: character_condition_states, character_operations e dice_rolls; modelos existentes ampliados para narrativas, espaços/equipamentos e antes/depois em auditoria. Máximos são derivados. Ver FICHA_DIGITAL.md e migração 202610300002_interactive_sheet.

@@ -14,6 +14,7 @@ enum CampaignRole {
 }
 enum CharacterStatus {
   DRAFT
+  PENDING_APPROVAL
   APPROVED
   ARCHIVED
 }
@@ -44,6 +45,8 @@ model User {
   reviews CharacterChangeRequest[] @relation("reviewer")
   characterLogs CharacterAuditLog[]
   adminLogs AdminAuditLog[]
+  diceRolls DiceRoll[] @relation("roller")
+  authorizedRetries DiceRoll[] @relation("retryAuthorizer")
   @@map("users")
 }
 model Session {
@@ -89,6 +92,7 @@ model Campaign {
   ownerId String @db.Char(36)
   owner User @relation(fields:[ownerId],references:[id],onDelete:Restrict)
   shareSheets Boolean @default(false)
+  physicalSkillKeys Json?
   archivedAt DateTime?
   version Int @default(1)
   createdAt DateTime @default(now())
@@ -136,6 +140,20 @@ model Character {
   campaign Campaign? @relation(fields:[campaignId],references:[id],onDelete:Restrict)
   name String @db.VarChar(80)
   concept String @db.Text
+  nickname String @default("") @db.VarChar(80)
+  age Int?
+  height Decimal? @db.Decimal(4,2)
+  weight Decimal? @db.Decimal(7,2)
+  profession String @default("") @db.VarChar(160)
+  backstory String? @db.Text
+  appearance String? @db.Text
+  personality String? @db.Text
+  objectives String? @db.Text
+  personalNotes String? @db.Text
+  imagePath String? @db.VarChar(500)
+  identityVersion Int @default(1)
+  attributesVersion Int @default(1)
+  skillsVersion Int @default(1)
   status CharacterStatus @default(DRAFT)
   rulesVersion String @default("2.6") @db.VarChar(20)
   version Int @default(1)
@@ -151,6 +169,9 @@ model Character {
   injuries CharacterInjury[]
   changes CharacterChangeRequest[]
   auditLogs CharacterAuditLog[]
+  conditionState CharacterConditionState?
+  rolls DiceRoll[]
+  operations CharacterOperation[]
   @@index([ownerId,archivedAt])
   @@index([campaignId])
   @@map("characters")
@@ -186,7 +207,6 @@ model CharacterResource {
   character Character @relation(fields:[characterId],references:[id],onDelete:Restrict)
   key String @db.VarChar(60)
   current Int
-  maximum Int
   version Int @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -199,6 +219,12 @@ model InventoryItem {
   character Character @relation(fields:[characterId],references:[id],onDelete:Restrict)
   name String @db.VarChar(100)
   quantity Int @default(1)
+  slotsPerUnit Decimal @default(0) @db.Decimal(8,2)
+  description String? @db.Text
+  equipment Boolean @default(false)
+  type String @default("") @db.VarChar(100)
+  damage String @default("") @db.VarChar(80)
+  weapon CharacterWeapon?
   notes String? @db.Text
   version Int @default(1)
   createdAt DateTime @default(now())
@@ -207,6 +233,8 @@ model InventoryItem {
   @@map("inventory_items")
 }
 model CharacterWeapon {
+  inventoryItemId String? @unique @db.Char(36)
+  inventoryItem InventoryItem? @relation(fields:[inventoryItemId],references:[id],onDelete:Restrict)
   id String @id @default(uuid()) @db.Char(36)
   characterId String @db.Char(36)
   character Character @relation(fields:[characterId],references:[id],onDelete:Restrict)
@@ -237,6 +265,9 @@ model CharacterInjury {
   character Character @relation(fields:[characterId],references:[id],onDelete:Restrict)
   description String @db.Text
   healedAt DateTime?
+  location String @default("") @db.VarChar(160)
+  consequences String? @db.Text
+  status String @default("ACTIVE") @db.VarChar(20)
   version Int @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -271,6 +302,8 @@ model CharacterAuditLog {
   actor User @relation(fields:[actorId],references:[id],onDelete:Restrict)
   action String @db.VarChar(80)
   recordVersion Int
+  beforeData Json?
+  afterData Json?
   createdAt DateTime @default(now())
   @@index([characterId,createdAt])
   @@index([actorId])
@@ -286,4 +319,61 @@ model AdminAuditLog {
   createdAt DateTime @default(now())
   @@index([actorId,createdAt])
   @@map("admin_audit_logs")
+}
+
+model CharacterConditionState {
+  characterId String @id @db.Char(36)
+  character Character @relation(fields:[characterId],references:[id],onDelete:Restrict)
+  fatigue Int @default(0)
+  bleeding Boolean @default(false)
+  critical Boolean @default(false)
+  incapacitated Boolean @default(false)
+  successes Int @default(0)
+  failures Int @default(0)
+  stabilization String @default("NONE") @db.VarChar(20)
+  version Int @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("character_condition_states")
+}
+model CharacterOperation {
+  id String @id @default(uuid()) @db.Char(36)
+  characterId String @db.Char(36)
+  character Character @relation(fields:[characterId],references:[id],onDelete:Restrict)
+  operationId String @db.Char(36)
+  requestHash String @db.Char(64)
+  result Json
+  createdAt DateTime @default(now())
+  @@unique([characterId,operationId])
+  @@map("character_operations")
+}
+model DiceRoll {
+  id String @id @default(uuid()) @db.Char(36)
+  characterId String @db.Char(36)
+  character Character @relation(fields:[characterId],references:[id],onDelete:Restrict)
+  userId String @db.Char(36)
+  user User @relation("roller",fields:[userId],references:[id],onDelete:Restrict)
+  expression String @db.VarChar(20)
+  results Json
+  initialResults Json
+  total Int
+  skillKey String? @db.VarChar(60)
+  target Int?
+  baseTarget Int?
+  fatiguePenalty Int @default(0)
+  fatigueApplied Boolean @default(false)
+  outcome String? @db.VarChar(20)
+  effortMode String @default("NONE") @db.VarChar(20)
+  retryRequestedAt DateTime?
+  retryAuthorizedById String? @db.Char(36)
+  retryAuthorizedBy User? @relation("retryAuthorizer",fields:[retryAuthorizedById],references:[id],onDelete:Restrict)
+  retryCategory String? @db.VarChar(20)
+  finalizedAt DateTime?
+  version Int @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([characterId,createdAt])
+  @@index([userId])
+  @@index([retryAuthorizedById])
+  @@map("dice_rolls")
 }

@@ -8,23 +8,48 @@ export class ApiError extends Error {
   }
 }
 let csrfToken: string | null = null;
-export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const method = init.method ?? "GET";
-  const headers = new Headers(init.headers);
-  if (!["GET", "HEAD"].includes(method)) {
-    if (!csrfToken) {
-      const response = await fetch("/api/auth/csrf", {
-        credentials: "same-origin",
-      });
+let csrfPromise: Promise<string> | null = null;
+async function getCsrf(): Promise<string> {
+  if (csrfToken) return csrfToken;
+  if (!csrfPromise)
+    csrfPromise = (async () => {
+      let response: Response;
+      try {
+        response = await fetch("/api/auth/csrf", {
+          credentials: "same-origin",
+        });
+      } catch {
+        throw new ApiError(
+          0,
+          "NETWORK_ERROR",
+          "Sem conexão para iniciar uma sessão segura.",
+        );
+      }
       if (!response.ok)
         throw new ApiError(
           response.status,
           "CSRF_UNAVAILABLE",
           "Não foi possível iniciar uma sessão segura.",
         );
-      csrfToken = (await response.json()).csrfToken;
-    }
-    headers.set("X-CSRF-Token", csrfToken!);
+      const data = await response.json();
+      if (typeof data.csrfToken !== "string")
+        throw new ApiError(
+          503,
+          "CSRF_UNAVAILABLE",
+          "Resposta de segurança inválida.",
+        );
+      csrfToken = data.csrfToken;
+      return data.csrfToken as string;
+    })().finally(() => {
+      csrfPromise = null;
+    });
+  return csrfPromise;
+}
+export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const method = init.method ?? "GET";
+  const headers = new Headers(init.headers);
+  if (!["GET", "HEAD"].includes(method)) {
+    headers.set("X-CSRF-Token", await getCsrf());
     headers.set("Content-Type", "application/json");
   }
   let response: Response;

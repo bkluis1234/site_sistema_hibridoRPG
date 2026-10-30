@@ -1,3 +1,4 @@
+import { cleanupUsers } from "../helpers/cleanup.js";
 import { beforeAll, afterAll, beforeEach, describe, it, expect } from "vitest";
 import request from "supertest";
 import { config as dotenv } from "dotenv";
@@ -90,20 +91,10 @@ beforeEach(() => {
   app = createApp(db, c);
 });
 afterAll(async () => {
-  const users = await db.user.findMany({
-    where: { username: { in: names } },
-    select: { id: true },
-  });
-  const ids = users.map((u) => u.id);
-  await db.adminAuditLog.deleteMany({ where: { actorId: { in: ids } } });
-  await db.characterAuditLog.deleteMany({ where: { actorId: { in: ids } } });
-  await db.character.deleteMany({ where: { ownerId: { in: ids } } });
-  await db.privilegeInvite.deleteMany({ where: { createdById: { in: ids } } });
-  await db.recoveryCode.deleteMany({ where: { userId: { in: ids } } });
-  await db.session.deleteMany({ where: { userId: { in: ids } } });
-  await db.user.deleteMany({ where: { id: { in: ids } } });
+  await cleanupUsers(db, names);
   await db.$disconnect();
 });
+
 describe("cadastro, sessões e autorização", () => {
   it("RF-001/005: cadastro transacional cria rascunho, códigos e auditoria no MySQL", async () => {
     const a = await register({ characterName: "Sobrevivente" });

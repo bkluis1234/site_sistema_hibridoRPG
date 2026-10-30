@@ -11,6 +11,7 @@ if (
 export default defineConfig({
   testDir: "tests/e2e",
   fullyParallel: false,
+  outputDir: "test-results/" + (process.env.PW_OUTPUT_SUBDIR ?? "all"),
   workers: 1,
   retries: 0,
   timeout: 30000,
@@ -32,5 +33,15 @@ export default defineConfig({
       reuseExistingServer: false,
     },
   ],
-  reporter: [["list"], ["html", { open: "never" }]],
+  reporter: [
+    ["list"],
+    [
+      "html",
+      {
+        open: "never",
+        outputFolder:
+          "playwright-report/" + (process.env.PW_OUTPUT_SUBDIR ?? "all"),
+      },
+    ],
+  ],
 });

@@ -1,39 +1,51 @@
-# Validação da primeira entrega
+# Validação — Parte 2 / aplicação 0.2.0
 
-Data: 30/10/2026. Ambiente cloud Linux, Node 24.19.0, npm 11.9.0, MySQL 8.4 em contêiner local de teste. Nenhum serviço de produção foi provisionado.
+Data: 30/10/2026. Cloud Linux, Node 24.19.0, npm 11.9.0, MySQL 8.4 local de teste e Chromium headless via Playwright 1.64.1. Nenhuma conta ou infraestrutura de produção foi criada. Histórico da fundação em [VALIDACAO_PARTE1.md](VALIDACAO_PARTE1.md).
 
-| Verificação executada | Resultado | Limite |
+## Resultados executados
+
+| Verificação | Resultado | Limite |
 |---|---|---|
-| `npm run typecheck` | Passou | TypeScript não prova correção em runtime |
-| `npm test` | 19/19 passaram | Hash, CSRF, contratos, configuração e bloqueio de mecânicas sem manual |
-| `npm run test:integration` | 19/19 passaram | MySQL real local; autorização, sessões, recuperação, convites, persistência, auditoria e concorrência |
-| Integração após ajuste de carregamento do .env | Caso de cadastro transacional passou (18 outros não repetidos nessa execução) | Suíte completa já havia passado; alteração final foi apenas localização de configuração |
-| `npm run test:e2e` | 4/4 passaram | Fluxo completo e falha de rede, desktop e Pixel 7 em Chromium |
-| E2E adicional `--grep conflito` | 2/2 passaram | Conflito, preservação local e recarga explícita, desktop e Pixel 7 |
-| `npm run build` | Passou após alteração final da configuração | Frontend ~453 kB JS / ~139 kB gzip; não é benchmark de desempenho |
-| `npm run db:generate` / `db:validate` | Passaram, Prisma Client 7.10.1 | Depende de npm ci e geração em outro computador |
-| Prisma migrate status | Atualizado | Migração inicial reparada no banco de teste, detalhes abaixo |
-| Prisma migrate diff banco → schema | Sem diferenças | CHECKs adicionais são SQL manual versionado, não representados como campos Prisma |
-| `npm run db:test:deploy` | Sem migrações pendentes | Guarda exige arquivo .env.test, NODE_ENV=test e nome terminado _test |
-| `npm audit --omit=dev --audit-level=high` | 0 vulnerabilidades reportadas | Registro consultado nessa data; não é auditoria independente nem análise de dependências dev |
-| CLI admin:create em TTY | Criou ADMIN sintético; segunda execução recusou | Somente banco descartável; senha não apareceu no eco do terminal |
-| CLI admin:recover em TTY | Emissão única e auditoria concluídas no ensaio | Identidade fictícia de teste; não valida o processo humano real de verificação |
-| Servidor compilado em modo production | /api/health 200, /login e rota SPA 200, API inexistente 404 JSON | Smoke HTTP local de build/roteamento; não prova TLS/DB/infraestrutura de produção |
-| `npm run dev -w @hibrido/api` lendo .env da raiz | Porta de teste 3001; /api/health e /api/ready 200 | Testado de dentro do workspace via npm, banco local |
-| Revisão visual | Login desktop e dashboard mobile inspecionados | Sem ficha oficial para comparar; sem auditoria WCAG completa |
+| `npm run typecheck` | Passou | Tipos não substituem testes de runtime |
+| `npm test` | 51/51 passaram | Contratos, segurança e regras explícitas da Parte 2; não substitui homologação do manual |
+| `npm run test:integration` | 38/38 passaram na suíte completa | MySQL real local, incluindo fundação preservada e ficha completa |
+| Integração adicional de precisão | 1/1 passou, demais casos não repetidos nessa execução | Impede corrupção de leitura por soma fora de Number.MAX_SAFE_INTEGER e confirma rollback |
+| `npm run test:e2e` | 5/5 desktop e 5/5 mobile passaram | Runner executa dois processos para isolar limites reais por IP, sem afrouxar proteção da API |
+| `npm run build` | Passou | JS ~500,5 kB minificado / ~151,6 kB gzip; Vite avisou sobre chunk >500 kB. Code splitting/medição em staging pendentes |
+| Prisma generate/validate | Passaram | Cliente 7.10.1 e schema MySQL validado |
+| Migração 202610300002_interactive_sheet | Aplicada com sucesso | Banco local hibrido_test, com fichas preexistentes; sem reset |
+| Prisma migrate status | Atualizado | Duas migrações versionadas |
+| Prisma migrate diff banco → schema | Sem diferenças | CHECKs adicionais constam no SQL e não como campos Prisma |
+| Revisão visual | Desktop e mobile inspecionados | Cabeçalhos/painéis/campos/recursos baseados na imagem oficial; não é auditoria completa de acessibilidade |
 
-## Migração e limitações do ambiente
+Total de cenários distintos aprovados nesta etapa: **100** (51 unitários + 39 de integração, sendo um caso adicional executado separadamente + 10 E2E). Repetições de testes não são contadas como casos novos. Relatórios de Playwright ficam separados por perfil e ignorados no Git; podem conter dados/credenciais sintéticos de teste.
 
-A primeira tentativa encontrou erro MySQL 1101: valor padrão direto em coluna TEXT. O schema e o código foram corrigidos: conceito vazio é informado pela aplicação. A tentativa de reset foi bloqueada pela proteção do Prisma e não foi executada. Uma instância vazia adicional foi tentada, mas seu bootstrap esgotou o disco. O contêiner que falhou antes de servir dados foi descartado; o primeiro foi preservado.
+## Cobertura
 
-A recuperação do banco de teste aplicou somente as 46 instruções SQL restantes, preservou as 8 tabelas já existentes (incluindo _prisma_migrations), e só então marcou a migração inicial como aplicada. O status e a comparação de schema confirmaram o estado esperado. Não houve reset nem exclusão de dados de jogadores. Esse reparo específico de desenvolvimento não deve ser copiado cegamente para produção. Uma aplicação limpa da migração completa em staging ainda precisa ser ensaiada antes de publicar.
+- Atributos válidos/incompletos/negativos/acima do limite e distribuição com zero; recursos para atributo 0..3 e validação de intervalos.
+- Treinamento, alvos da tabela oficial fornecida, cap 19, natural 20, fadiga por perícia e preservação de base.
+- Persistência da identificação, nulos opcionais, atributos/máximos sem cura automática e ajuste de atuais ao reduzir máximo.
+- CRUD e versões de inventário, contagem única de equipamentos, isolamento de IDs entre fichas, exclusão idempotente e precisão numérica agregada.
+- Ferimentos, sangramento/fadiga sem dano automático, alerta de ataque único, incapacitação, estabilização e morte sem recuperação automática.
+- Submit/reopen e bloqueio de mecânica aprovada; ficha arquivada somente leitura inclusive pela rota legada.
+- Domínios independentes concorrentes, conflito de mesmo recurso, reuso de UUID, ausência de gasto/log duplicado.
+- Dados oficiais de todas as faces suportadas; cliente não pode enviar results; bônus e repetição PE, natural 20, saldo insuficiente e fechamento de decisão anterior.
+- Política de fadiga só por GM vinculado; override contextual de GM; jogador não autoriza sua repetição; vínculo removido invalida autorização antes do gasto.
+- Fundação: cadastro/login/logout, CSRF, cookies seguros, recuperação simultânea, convites e negação de acesso universal de ADMIN.
+- E2E por perfil: conta/recuperação/ficha/logout; rede abortada; conflito com cópia local; sessão completa da ficha; autosave e recurso simultâneos compartilhando CSRF.
 
-O cache npm temporário e o Chrome completo adicional foram removidos para liberar espaço. Chromium headless foi mantido para os testes. O acesso de rede e Docker exigiu permissões do ambiente. Não houve troca de MySQL por outro banco.
+## Problemas encontrados e corrigidos
 
-## Cobertura e pendências
+Campos numéricos opcionais inicialmente convertiam null em zero no frontend, bloqueando a validação e o autosave; corrigido para preservar nulos. Checkbox de sangramento passou a mostrar estado local pendente com rollback no erro, em vez de piscar para o valor antigo antes da confirmação. Rota de configuração de fadiga foi ligada corretamente e confirmada por integração. Inicialização CSRF simultânea passou a usar uma promessa compartilhada para evitar cookies concorrentes.
 
-Integração: cadastro opcional com ficha/códigos; login e logout em agentes diferentes; credencial inválida e conta desabilitada; escalada de papel rejeitada; login duplicado; CSRF e Origin; expiração absoluta/ociosa; limite por conta; flags de cookie de produção; recuperação simultânea com um vencedor; código inválido; convite simultâneo com um vencedor; revogação/expiração; rollback do consumo em cadastro duplicado; persistência entre dispositivos; conflito atômico e auditoria; isolamento inclusive para ADMIN sem vínculo; rejeição de edição mecânica e ausência de segredos nas projeções.
+O teste de recuperação foi ajustado para esperar a nova tela antes de preencher, evitando escrever no campo da tela anterior durante a transição de rota. Desktop/mobile agora iniciam processos distintos porque simulam vários usuários no mesmo loopback; a limitação real por IP não foi removida nem aumentada. As últimas execuções completas passaram.
 
-Os seis cenários E2E passaram em duas execuções (quatro iniciais + dois adicionais), e não em uma execução única posterior. Os relatórios/traces ficam ignorados no Git porque podem conter credenciais sintéticas. A checagem final de instalação cobriu o ajuste do .env sem repetir desnecessariamente todos os cenários de negócio.
+## Limites de verificação
 
-Não testados: Firefox/WebKit, aparelho físico, leitor de tela, auditoria de contraste completa, carga com 20 usuários, HTTPS/certificados reais, TLS do provedor MySQL, Render, backups/restauração e continuidade por clone remoto. Fórmulas mecânicas não implementadas; campanhas e gestão administrativa completa pendentes. Não declarar RNFs integralmente cumpridos com base apenas nesses testes locais.
+Manual completo não anexado; regras implementadas são as explicitamente fornecidas na Parte 2 e na instrução posterior de fadiga. A proposta de fadiga ainda depende da revisão de Marcus. Não testar fórmulas ausentes como se fossem homologadas.
+
+Storage externo de retrato não configurado: somente seletor/prévia local e contrato estão prontos. Não há teste de upload persistente porque não existe endpoint ativo. Aprovação definitiva e telas de campanhas/membros/GM pertencem à Parte 3.
+
+Sem deploy Render, HTTPS/TLS reais do provedor MySQL, teste de backup/restauração, carga de 20 usuários, Firefox/WebKit, aparelho físico ou leitor de tela. RPO/RTO/latência/WCAG continuam metas, não requisitos integralmente comprovados. Nenhuma instalação global foi presumida; versões e bibliotecas estão no lockfile herdado. Auditoria npm de produção sem vulnerabilidades pertence ao registro da Parte 1; não foi tratada como uma nova auditoria independente nesta etapa.
+
+Servidores de QA e MySQL de teste foram utilizados localmente; o banco não integra o pacote de transferência. Históricos e limites anteriores permanecem na validação da Parte 1. Antes de produção, ensaiar as duas migrações desde uma instância vazia, backups e restauração.

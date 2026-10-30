@@ -16,6 +16,9 @@ test("cadastro, recuperação, ficha persistida e logout em desktop/celular", as
     fullPage: true,
   });
   await page.getByRole("link", { name: "Criar uma conta" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Deixe sua marca." }),
+  ).toBeVisible();
   await page.getByLabel("Nome de usuário", { exact: true }).fill(username);
   await page
     .getByLabel("Personagem inicial (opcional)")
@@ -65,6 +68,9 @@ test("cadastro, recuperação, ficha persistida e logout em desktop/celular", as
   await page.getByRole("button", { name: "Sair da conta" }).click();
   await expect(page).toHaveURL(/login/);
   await page.getByRole("link", { name: "Recuperar acesso" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Encontre o caminho." }),
+  ).toBeVisible();
   await page.getByLabel("Nome de usuário", { exact: true }).fill(username);
   await page.getByLabel("Código de recuperação").fill(code);
   await page
@@ -78,6 +84,9 @@ test("cadastro, recuperação, ficha persistida e logout em desktop/celular", as
     page.getByRole("heading", { name: "Senha alterada" }),
   ).toBeVisible();
   await page.getByRole("link", { name: "Entrar novamente" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Bem-vindo de volta." }),
+  ).toBeVisible();
   await page.getByLabel("Nome de usuário", { exact: true }).fill(username);
   await page
     .getByLabel("Senha", { exact: true })
@@ -107,7 +116,7 @@ test("falha de rede preserva texto e não confirma salvamento", async ({
   await page
     .getByLabel("Conceito e história")
     .fill("Este texto precisa ser preservado.");
-  await page.route("**/api/characters/*", (route) =>
+  await page.route("**/api/characters/**", (route) =>
     route.request().method() === "PATCH"
       ? route.abort("failed")
       : route.continue(),

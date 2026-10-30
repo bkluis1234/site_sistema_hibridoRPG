@@ -58,9 +58,11 @@ export type CharacterSummary = {
   id: string;
   name: string;
   concept: string;
-  status: "DRAFT" | "APPROVED" | "ARCHIVED";
+  status: "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "ARCHIVED";
   rulesVersion: string;
   version: number;
   updatedAt: string;
   campaignId: string | null;
 };
+
+export * from "./sheet.js";

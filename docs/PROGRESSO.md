@@ -1,71 +1,72 @@
 # Progresso — Sistema Híbrido 2.6
 
-Atualizado em 30/10/2026. Entrega 1: fundação implementada e verificada nos limites de VALIDACAO.md. Entregas posteriores continuam pendentes. Não publicado em produção.
+Atualizado em 30/10/2026. Versão da aplicação: 0.2.0. Fundação preservada e núcleo da ficha da Parte 2 implementado. Referências: imagem oficial e texto explícito da Parte 2; Manual completo ainda pendente. Sem publicação em produção ou repositório remoto configurado.
 
 ## Arquitetura adotada
 
-Monorepositório npm workspaces: apps/web React/Vite/TypeScript e apps/api Express/TypeScript; packages/shared com contratos Zod; packages/rpg-rules isolado e bloqueado até receber manual. API mesma origem, sessão opaca persistida no MySQL 8.4, Prisma 7 e migrações versionadas. Produção prevista: Render para aplicação e MySQL gerenciado externo com TLS e armazenamento persistente próprio.
+Monorepositório npm: React/TypeScript/Vite em apps/web, Express/TypeScript em apps/api, contratos Zod em packages/shared e regras 2.6 em packages/rpg-rules. MySQL 8.4 é a fonte oficial; Prisma 7 e migrações SQL versionadas. Sessão segura e CSRF da Parte 1 mantidos. Produção planejada: aplicação Render na mesma origem e MySQL gerenciado externo com TLS.
 
-## Implementado
+Ficha usa versões independentes para identificação, atributos, treinamentos e registros de recursos/itens/condições/ferimentos/rolagens. Transação ordena operações por ficha; operationId evita efeitos duplicados. Auditoria tem ator/data/ação/antes/depois. Sem dados simulados ou arquivos JSON como banco.
 
-- Estrutura de repositório, configuração TypeScript, scripts, lockfile, exemplos de ambiente e Compose local com volume.
-- 17 entidades solicitadas + privilege_invites, PKs/FKs/índices/uniquidade, datas, versão e exclusões restritas nas entidades de domínio.
-- Cadastro com login único sem e-mail, confirmação de senha, personagem opcional e transação atômica.
-- Argon2id; sessões HttpOnly com expiração absoluta/ociosa; logout no servidor; CSRF assinado + validação de Origin; limites de tentativas por IP e conta.
-- Oito códigos de recuperação de uso único; troca de senha revoga sessões; procedimento CLI de recuperação verificada e auditada.
-- Primeiro ADMIN somente via CLI interativo com senha oculta e proteção contra criação duplicada.
-- Convites temporários de mestre gerados/revogados por ADMIN; hash, expiração, uso único atômico e escopo separado de privilégios administrativos.
-- Login, cadastro, recuperação, exibição/baixa única de códigos, dashboard, perfil, painel inicial de convites, criação de rascunhos e ficha por seções.
-- Nome/conceito de ficha realmente persistidos; consultas entre dispositivos; proteção por proprietário; conflito 409 com preservação local e recarga explícita.
-- Componentes HorrorPanel, SectionHeader, ResourceBar, AttributeCard, SkillRow, InventoryTable, ConditionTracker, CharacterCard, CampaignCard e SaveStatus. Componentes de mecânica prontos para receber dados futuros, sem valores ou fórmulas presumidos.
-- Auditoria transacional das ações disponíveis; projeções de resposta sem hashes/códigos internos.
-- Requisitos RF/RNF/RN, arquitetura, API, instalação, Render, backups/restauração e pendências do manual documentados.
-- Testes: 19 unitários, 19 integração MySQL, 6 cenários E2E desktop/mobile; compilação e ensaios CLI. Detalhes e ressalvas em VALIDACAO.md.
+## Funcionalidades implementadas
 
-## Dependências instaladas
-
-Node 24.19.0, npm 11.9.0. React/React DOM 19.3.1; Vite 8.3.5 e plugin React 6.1.2; TypeScript 5.9.3; React Router 7.18.5; Tailwind 4.3.3; TanStack Query 5.105.0; React Hook Form 7.91.0; Zod 4.6.7; Lucide 0.562.0; Express 5.3.0; Prisma/client/adaptador 7.10.1; Argon2 0.44.0; Vitest 4.1.12; Supertest 7.3.1; Playwright 1.64.1. Versões exatas e transitivas em package-lock.json. Usar npm ci no PC.
+- Parte 1: contas sem e-mail, login/logout, Argon2id, cookies seguros, recuperação por códigos, primeiro ADMIN por CLI, convites temporários de mestre e dashboard.
+- Identificação completa: nome/apelido/idade/altura/peso/profissão e narrativas; autosave 850 ms, validação RHF/Zod, estado de salvamento, falha/repetição e reconciliação explícita de conflito.
+- Rascunho textual em memória por conta/ficha, preservado ao navegar internamente; aviso ao fechar/recarregar com edição pendente. Sem fila offline persistente.
+- Atributos AGI/FOR/INT/PRE/VIG com distribuição inicial e validação de oito pontos; quatro treinamentos; 21 perícias com alvo calculado e filtros/pesquisa.
+- PV/SAN/PE derivados, controles rápidos e quantidade personalizada, confirmação no servidor e eventos de dano explícitos. Máximo aumentado não cura; reduzido limita atual e audita.
+- Inventário com CRUD, quantidade/espaços e alerta de carga; armas/equipamentos como projeção do mesmo objeto, sem dupla contagem ou dano automático.
+- Ferimentos ativos/tratados/resolvidos, sangramento sem temporizador, fadiga 0..3 e acompanhamento crítico com três sucessos/falhas, sem cura ou testes automáticos.
+- Fadiga inicial em Atletismo, Acrobacia, Furtividade, Luta e Reflexos, conforme instrução adicional do proprietário. Alvo base/penalidade/final separados. Lista substituível pelo GM vinculado e override contextual autorizado por teste. Proposta sujeita à revisão de Marcus.
+- Dados d4/d6/d8/d10/d12/d20/d100, múltiplos dados, resultado/soma no servidor e rolagens persistentes. Teste d20 <= alvo e 20 natural falha.
+- Opções de PE: aceitar, bônus 1 PE ou pedir repetição 2 PE; repetição exige GM ativo da campanha, categoria/justificativa e nova conferência do vínculo ao gastar. Transação e idempotência impedem gasto duplo.
+- Submit valida e passa a PENDING_APPROVAL; reabrir pedido devolve DRAFT. Fichas APPROVED protegem mecânica e ARCHIVED são somente leitura, inclusive pela rota legada.
+- Histórico paginado com projeções autorizadas, antes/depois e preservação de snapshots das rolagens.
+- Layout baseado na ficha oficial, com campos claros/painéis pretos/cabeçalhos vermelhos, PV vermelho, SAN roxo, PE azul e fadiga âmbar. Mobile por abas e recursos de acesso rápido.
+- Prévia/seleção/substituição/remoção local de retrato, tipos e tamanho configurável. API declara storage não configurado e contrato PortraitStorage foi preparado.
 
 ## Migrações executadas
 
-`202610300001_foundation`: schema inicial MySQL e CHECKs de versão/quantidade. Executada/reparada somente no banco local descartável hibrido_test, com status atualizado e migrate diff sem diferenças. Erro inicial de TEXT/default resolvido. A migração limpa completa ainda deve ser ensaiada em staging. Nenhuma migração/banco de produção foi criado. Não usar reset em produção.
+- 202610300001_foundation: fundação da Parte 1, reparada em teste conforme histórico em VALIDACAO.md.
+- 202610300002_interactive_sheet: aplicada com sucesso no MySQL local hibrido_test; completa narrativas, versões, dados estruturados de condições, rolagens, idempotência, espaços/equipamentos e auditoria. Preenche fichas anteriores e remove máximo redundante dos recursos. Status atualizado e migrate diff sem diferenças.
 
-## Comandos para continuar
+Nenhuma migração executada em produção. Ensaio de instalação inteiramente limpa e de restauração continua necessário em staging antes de publicar.
+
+## Dependências e comandos
+
+Não foram acrescentadas dependências runtime nesta etapa. Mantidas versões do lockfile: Node 24, React 19.3.1, Vite 8.3.5, TypeScript 5.9.3, Express 5.3.0, Prisma 7.10.1, Zod 4.6.7, Tailwind 4.3.3, Vitest 4.1.12, Supertest 7.3.1, Playwright 1.64.1 e demais bibliotecas aprovadas. Formatação realizada por Prettier temporário, sem dependência nova no projeto.
 
 ```sh
 npm ci
-# Criar .env a partir de .env.example e configurar seu próprio MySQL/segredos.
+# Criar .env pelo exemplo, com MySQL e segredos próprios.
 npm run db:generate
 npm run db:deploy
 npm run dev
 ```
 
-Para testes: criar .env.test a partir do exemplo, configurar banco dedicado terminado _test, executar `npm run db:test:deploy`, `npm test`, `npm run test:integration`. Instalar Chromium com `npm exec -- playwright install chromium` e executar `npm run test:e2e`. No ambiente desta entrega, o navegador foi instalado em /workspace/.cache/ms-playwright; foi usado PLAYWRIGHT_BROWSERS_PATH apontando para esse diretório. Essa configuração local não é exigida no PC.
+Testes: criar .env.test por .env.test.example e usar banco dedicado terminado _test. Executar `npm run db:test:deploy`, `npm test`, `npm run test:integration`. Instalar Chromium e executar `npm run test:e2e`. O runner E2E executa desktop/mobile com processos distintos para não somar tentativas de perfis simulados no mesmo limite por IP. A proteção real da API não foi desativada. Relatórios por perfil ficam ignorados em test-results e playwright-report.
 
-ADMIN: `npm run admin:create` em terminal seguro do servidor. Não há conta administrativa de produção ou senha padrão. Somente contas sintéticas foram criadas no banco de teste.
+Neste cloud, o Chromium headless está em /workspace/.cache/ms-playwright; foi usado PLAYWRIGHT_BROWSERS_PATH nesse caminho. No PC, instalar normalmente pelo Playwright. Comandos completos no README. ADMIN de produção não existe; credenciais criadas aqui são exclusivamente sintéticas do banco de teste.
 
-## Pendências
+## Validação
 
-1. Criar repositório remoto privado e enviar main; clonar no PC. O proprietário informou que ainda não há URL.
-2. Receber ficha oficial e Manual Híbrido 2.6; conferir PENDENCIAS_MANUAL.md e exemplos com Marcus.
-3. Etapa 2: regras versionadas, validação de finalização, atributos/recursos/perícias, inventário, equipamentos, condições e ferimentos persistidos.
-4. Etapa 3: criação/convites de campanhas, vínculos GM/PLAYER, compartilhamento autorizado, painel de mestre e aprovações de mecânica. Gestão completa de contas/campanhas/logs/configurações ADMIN também permanece pendente.
-5. Etapa 4: rolador, modo sessão, exportação e histórico detalhado.
-6. Etapa 5: matriz completa de browsers/acessibilidade/carga, deploy Render, MySQL gerenciado, backup restaurado e monitoramento.
+Regras, sessões/CSRF e contratos têm 51 testes unitários. 39 casos de integração MySQL aprovados (38 na suíte completa e um adicional de precisão), cobrindo persistência, concorrência, isolamento, carga, crítico, fadiga configurável e decisões PE; relatório em VALIDACAO.md. Playwright executou cinco cenários em desktop e cinco em celular, todos aprovados, incluindo fluxo completo e inicialização CSRF compartilhada por autosave/recurso simultâneos. Build, TypeScript e schema Prisma passaram.
 
-## Erros conhecidos e limites
+## Pendências e limitações
 
-- Sem manual ou imagem anexada; visual inspirado somente na descrição e sem fórmulas inventadas.
-- Rotas de campanhas de escrita e edição mecânica não estão habilitadas. A consulta lista vínculos existentes, sem dados simulados.
-- Sem bloqueio de navegação interna com texto não salvo; existe aviso ao fechar/recarregar. Sem autosave/fila offline; texto permanece apenas enquanto o formulário fica montado.
-- Confirmação de cadastro pode se perder após transação se a rede cair; códigos não são reexibidos. Recuperação administrativa cobre esse caso após verificar identidade.
-- Listagens limitadas (100 fichas/50 convites); paginação futura. Limitação de tentativas em memória: adotar store compartilhado antes de múltiplas instâncias.
-- Rotina agendada de remoção de sessões expiradas e políticas de retenção/anonimização pendentes; sessões expiradas já são rejeitadas.
-- Nenhum HTTPS/TLS real, plano Render, banco gerenciado, backup/restauro, carga de produção ou repositório remoto verificado.
-- Ambiente teve limite de disco no ensaio Docker; recuperado removendo somente cache/artefatos da tarefa e contêiner cuja inicialização falhou. Banco local de teste foi preservado, sem reset.
+1. Storage externo persistente de retrato: UI é prévia local; não salva imagem no banco ou no disco temporário do Render. Configurar provedor e validação real de imagem no backend antes de habilitar upload.
+2. Aprovação definitiva e painel completo de campanhas/membros/GM na Parte 3. API atual já autoriza GM legítimo em ficha vinculada, mas não cria vínculos/campanhas fictícios nem concede acesso universal. Compartilhamento entre colegas e transferências de itens ainda pendentes.
+3. Conferir manual completo e exemplos com Marcus, especialmente fadiga proposta, dano de armas, exceções, reentrada em crítico, deslocamento e recuperação incompleta de PE.
+4. Repositório privado remoto ainda não criado. O proprietário informou que não existe URL; o commit/bundle local não se sincroniza automaticamente com o PC.
+5. Produção: Render, MySQL gerenciado, TLS real, backups/restauração, monitoramento, carga e política de retenção/anonimização não provisionados/verificados.
+6. Sem fila offline persistente, push em tempo real ou merge automático de texto. Fechar/recarregar ignorando o aviso pode perder rascunho ainda não confirmado; o MySQL continua fonte oficial.
+7. Rate limit permanece em memória por processo: store compartilhado antes de escala horizontal. Rotina agendada de limpeza de sessões/operações e política de retenção precisam ser definidas.
+8. Listagens de fichas/rolagens/convites ainda têm limites; histórico já tem cursor. Histórico com narrativas muito longas e chunk JS ~500,5 kB (~151,6 kB gzip) pedem medição/otimização em staging. O build avisou sobre chunk >500 kB; não é falha de compilação nem prova de meta de latência.
+9. Navegadores físicos, Firefox/WebKit, leitor de tela, auditoria WCAG/contraste completa e testes de carga permanecem pendentes.
+10. Exportação, transferências e modo sessão avançado seguem em entregas posteriores.
 
 ## Continuidade Git
 
-Arquivos e documentação registrados em commit local na branch main, junto de pacote ZIP com fonte e bundle do histórico Git. O ZIP não contém .env, node_modules, dados MySQL, credenciais ou traces. O commit exato fica em ENTREGA.json no pacote de transferência.
+Histórico da Parte 1 preservado e novas alterações registradas em commit da Parte 2. Pacote ZIP inclui código versionado, histórico completo em historico.git.bundle e instruções CONTINUAR_NO_PC.md; não inclui .env, node_modules, dados MySQL, credenciais ou traces. O commit exato consta em ENTREGA.json no pacote.
 
-Para recuperar o histórico no PC: extraia o ZIP, execute `git clone historico.git.bundle sistema-hibrido` em uma pasta vazia e entre na pasta clonada. Depois crie o remoto privado, `git remote set-url origin <URL>` e `git push -u origin main`. Uma vez remoto, essa URL será a referência entre celular/PC. Arquivos locais deste ambiente não aparecem automaticamente no seu computador.
+Extraia o ZIP e execute `git clone historico.git.bundle sistema-hibrido` para recuperar o histórico. Depois de criar remoto privado, `git remote set-url origin <URL>` e `git push -u origin main`. No outro dispositivo, clone esse remoto. O repositório remoto, quando criado, será a referência de continuidade.

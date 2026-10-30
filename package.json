@@ -1,7 +1,7 @@
 {
   "name": "sistema-hibrido",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "workspaces": [
     "apps/*",
@@ -16,7 +16,7 @@
     "typecheck": "tsc --noEmit && npm run typecheck -w @hibrido/web",
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "test:e2e": "playwright test",
+    "test:e2e": "node scripts/e2e.mjs",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",

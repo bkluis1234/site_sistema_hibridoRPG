@@ -28,15 +28,9 @@ import {
   publicUser,
 } from "./security.js";
 
-export class HttpError extends Error {
-  constructor(
-    public status: number,
-    public code: string,
-    message: string,
-  ) {
-    super(message);
-  }
-}
+import { HttpError } from "./errors.js";
+import { initializeSheet } from "./sheet-service.js";
+import { mountSheetRoutes } from "./sheet-routes.js";
 const unauthorized = () =>
   new HttpError(401, "UNAUTHENTICATED", "Entre na sua conta para continuar.");
 const characterSelect = {
@@ -87,7 +81,7 @@ export function createApp(db: PrismaClient, c: Config) {
     if (req.path.startsWith("/api")) res.setHeader("Cache-Control", "no-store");
     next();
   });
-  app.use(express.json({ limit: "32kb" }));
+  app.use(express.json({ limit: "128kb" }));
   app.use(cookieParser());
   const limit = (max: number, windowMs: number) =>
     rateLimit({
@@ -267,6 +261,7 @@ export function createApp(db: PrismaClient, c: Config) {
       const initial = await tx.character.findFirst({
         where: { ownerId: user.id },
       });
+      if (initial) await initializeSheet(tx, initial.id);
       if (initial)
         await tx.characterAuditLog.create({
           data: {
@@ -380,6 +375,7 @@ export function createApp(db: PrismaClient, c: Config) {
         data: { name: input.name, concept: "", ownerId: res.locals.user.id },
         select: characterSelect,
       });
+      await initializeSheet(tx, ch.id);
       await tx.characterAuditLog.create({
         data: {
           actorId: res.locals.user.id,
@@ -413,10 +409,12 @@ export function createApp(db: PrismaClient, c: Config) {
           ownerId: res.locals.user.id,
           version: input.version,
           archivedAt: null,
+          status: { not: "ARCHIVED" },
         },
         data: {
           name: input.name,
           concept: input.concept,
+          identityVersion: { increment: 1 },
           version: { increment: 1 },
         },
       });
@@ -526,21 +524,20 @@ export function createApp(db: PrismaClient, c: Config) {
     });
     res.status(204).end();
   });
+  mountSheetRoutes(app, db, auth, c.PORTRAIT_MAX_BYTES);
   app.use("/api", (_req, _res, next) =>
     next(new HttpError(404, "NOT_FOUND", "Rota não encontrada.")),
   );
   app.use(
     (error: unknown, _req: Request, res: Response, _next: NextFunction) => {
       if (error instanceof z.ZodError)
-        return res
-          .status(400)
-          .json({
-            error: {
-              code: "VALIDATION_ERROR",
-              message: "Revise os campos informados.",
-              fields: error.flatten().fieldErrors,
-            },
-          });
+        return res.status(400).json({
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Revise os campos informados.",
+            fields: error.flatten().fieldErrors,
+          },
+        });
       if (error instanceof HttpError)
         return res
           .status(error.status)
@@ -549,14 +546,12 @@ export function createApp(db: PrismaClient, c: Config) {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       )
-        return res
-          .status(409)
-          .json({
-            error: {
-              code: "CONFLICT",
-              message: "Não foi possível concluir: registro já existente.",
-            },
-          });
+        return res.status(409).json({
+          error: {
+            code: "CONFLICT",
+            message: "Não foi possível concluir: registro já existente.",
+          },
+        });
       const malformed =
         error instanceof SyntaxError &&
         "status" in error &&
@@ -567,11 +562,9 @@ export function createApp(db: PrismaClient, c: Config) {
         "status" in error &&
         error.status === 413;
       if (malformed || tooLarge)
-        return res
-          .status(tooLarge ? 413 : 400)
-          .json({
-            error: { code: "INVALID_REQUEST", message: "Requisição inválida." },
-          });
+        return res.status(tooLarge ? 413 : 400).json({
+          error: { code: "INVALID_REQUEST", message: "Requisição inválida." },
+        });
       console.error(
         JSON.stringify({
           event: "request_failed",
@@ -582,15 +575,13 @@ export function createApp(db: PrismaClient, c: Config) {
               : "internal",
         }),
       );
-      return res
-        .status(503)
-        .json({
-          error: {
-            code: "SERVICE_UNAVAILABLE",
-            message: "Serviço indisponível. Tente novamente.",
-            requestId: res.locals.requestId,
-          },
-        });
+      return res.status(503).json({
+        error: {
+          code: "SERVICE_UNAVAILABLE",
+          message: "Serviço indisponível. Tente novamente.",
+          requestId: res.locals.requestId,
+        },
+      });
     },
   );
   return app;

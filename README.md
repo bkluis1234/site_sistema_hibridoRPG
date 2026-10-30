@@ -1,6 +1,8 @@
 # Sistema Híbrido 2.6
 
-Plataforma de fichas da campanha de Marcus. Primeira entrega: fundação, autenticação real sem e-mail, convites temporários de mestre, dashboard e rascunhos persistidos no MySQL. **Ainda não inclui regras mecânicas, inventário ou administração de campanhas.** O manual e a ficha oficial não foram anexados nesta sessão; nenhum atributo ou fórmula foi inventado.
+Plataforma real de fichas da campanha de Marcus. Parte 1 preservada; Parte 2 implementa identificação com autosave, atributos, recursos, 21 perícias, inventário/equipamentos, condições, ferimentos, rolagens do servidor, decisões de PE e histórico, com persistência MySQL e controle de conflitos.
+
+A imagem oficial e as regras explícitas da Parte 2 foram utilizadas. O manual completo continua pendente de conferência. **Upload persistente de retrato, aprovação definitiva/painel de campanhas e publicação ainda não estão concluídos.** O seletor de imagem mostra apenas prévia local até configurar storage externo.
 
 ## Tecnologias e organização
 
@@ -10,7 +12,7 @@ Node.js 24 LTS, React 19, TypeScript, Vite, React Router, Tailwind CSS, TanStack
 apps/web             React e componentes reutilizáveis
 apps/api             API REST, segurança e comandos de servidor
 packages/shared      Contratos Zod e DTOs públicos
-packages/rpg-rules   Regras versionadas (aguarda manual)
+packages/rpg-rules   Regras 2.6 compartilhadas, fornecidas na Parte 2
 prisma               Modelos e migrações SQL versionadas
 tests                Unitários, integração MySQL e E2E
 docs                 Requisitos, decisões, operação e progresso
@@ -52,17 +54,19 @@ O diretório de trabalho deve ser a raiz do monorepositório. O cadastro normal 
 
 Copie `.env.test.example` para `.env.test` e preencha com `NODE_ENV=test`, DATABASE_URL apontando para um banco **dedicado** cujo nome termine em `_test`, APP_ORIGIN=http://localhost:5173 e CSRF_SECRET aleatório. Nunca use banco de jogadores nos testes. Os testes de integração apagam somente seus registros `it_*`; o E2E deixa registros sintéticos `e2e_*` no banco descartável. A guarda impede rodar em nomes sem `_test`, mas não substitui conferir host e credenciais.
 
-Aplique primeiro a migração no banco de teste com `npm run db:test:deploy`, que carrega `.env.test` e valida a guarda de ambiente antes de chamar o Prisma. Não copie credenciais de produção. `npm exec -- playwright install chromium` instala o navegador necessário (sistemas Linux podem precisar das dependências nativas do Playwright). Em seguida execute integração e E2E. O Playwright sobe os dois servidores e não reaproveita processos já existentes.
+Aplique primeiro a migração no banco de teste com `npm run db:test:deploy`, que carrega `.env.test` e valida a guarda de ambiente antes de chamar o Prisma. Não copie credenciais de produção. `npm exec -- playwright install chromium` instala o navegador necessário (sistemas Linux podem precisar das dependências nativas do Playwright). Em seguida execute integração e E2E. O runner executa cada perfil (desktop/mobile) com servidores novos, isolando o limite real de tentativas por IP entre dispositivos simulados. Não desativa a proteção da API. Os relatórios ficam em subpastas por perfil de test-results e playwright-report.
 
 ## Continuidade e publicação
 
 - [Progresso e próximos passos](docs/PROGRESSO.md)
 - [Requisitos RF, RNF e RN](docs/REQUISITOS.md)
 - [Arquitetura e limites de segurança](docs/ARQUITETURA.md)
+- [Regras implementadas e conferências](docs/REGRAS_RPG.md)
+- [Uso e estrutura da ficha digital](docs/FICHA_DIGITAL.md)
 - [Contrato da API](docs/API.md)
 - [Publicação no Render](docs/PUBLICACAO.md)
 - [Backup e recuperação](docs/OPERACAO.md)
 - [Informações pendentes do manual](docs/PENDENCIAS_MANUAL.md)
 - [Resultados de validação](docs/VALIDACAO.md)
 
-Ainda não existe repositório remoto fornecido pelo proprietário. Um commit local e o pacote de transferência não se sincronizam automaticamente com o PC. Após criar um repositório vazio privado, execute `git remote add origin <URL>` e `git push -u origin main`; no PC, clone essa URL. Nunca envie `.env`, dumps, códigos de recuperação ou arquivos de relatório com credenciais.
+Ainda não existe repositório remoto fornecido pelo proprietário. Um commit local e o pacote de transferência não se sincronizam automaticamente com o PC. Após criar um repositório vazio privado, execute `git remote add origin <URL>` (ou `git remote set-url origin <URL>` se clonou o bundle) e `git push -u origin main`; no PC, clone essa URL. Nunca envie `.env`, dumps, códigos de recuperação ou arquivos de relatório com credenciais.

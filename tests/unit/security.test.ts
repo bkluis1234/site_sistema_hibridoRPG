@@ -145,8 +145,9 @@ describe("configuração e regras", () => {
     expect(() =>
       loadConfig({ ...base, APP_ORIGIN: "https://rpg.example.com/" }),
     ).toThrow("APP_ORIGIN"));
-  it("não inventa regras antes da homologação", () => {
-    expect(RULES_IMPLEMENTED).toBe(false);
-    expect(() => requireMechanics()).toThrow("MANUAL_REQUIRED");
+  it("carrega somente a versão de regras explicitamente fornecida", () => {
+    expect(RULES_IMPLEMENTED).toBe(true);
+    expect(() => requireMechanics()).not.toThrow();
+    expect(() => requireMechanics("outro")).toThrow("Versão");
   });
 });
