@@ -1,0 +1,8 @@
+{
+  "name": "@hibrido/rpg-rules",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

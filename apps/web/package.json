@@ -1,0 +1,28 @@
+{
+  "name": "@hibrido/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-router": "^7.12.0",
+    "@tanstack/react-query": "^5.90.16",
+    "react-hook-form": "^7.71.0",
+    "@hookform/resolvers": "^5.2.2",
+    "zod": "^4.3.5",
+    "lucide-react": "^0.562.0"
+  },
+  "devDependencies": {
+    "vite": "^8.3.5",
+    "@vitejs/plugin-react": "^6.1.2",
+    "tailwindcss": "^4.1.18",
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3"
+  }
+}

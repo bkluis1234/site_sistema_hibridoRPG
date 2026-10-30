@@ -1,0 +1,45 @@
+{
+  "name": "sistema-hibrido",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "concurrently -k \"npm run dev -w @hibrido/api\" \"npm run dev -w @hibrido/web\"",
+    "build": "npm run build -w @hibrido/web && npm run build -w @hibrido/api",
+    "typecheck": "tsc --noEmit && npm run typecheck -w @hibrido/web",
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e": "playwright test",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:validate": "prisma validate",
+    "admin:create": "tsx apps/api/src/admin-cli.ts",
+    "start": "node apps/api/dist/apps/api/src/server.js",
+    "admin:recover": "tsx apps/api/src/recovery-cli.ts",
+    "db:test:deploy": "node scripts/test-db.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "tsx": "^4.21.0",
+    "concurrently": "^9.2.1",
+    "vitest": "^4.0.16",
+    "supertest": "^7.1.4",
+    "@types/supertest": "^6.0.3",
+    "@types/node": "^24.10.0",
+    "@playwright/test": "^1.57.0",
+    "prisma": "^7.2.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "@prisma/client": "^7.2.0",
+    "@prisma/adapter-mariadb": "^7.2.0"
+  }
+}

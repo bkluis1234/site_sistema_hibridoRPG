@@ -1,0 +1,68 @@
+# Sistema Híbrido 2.6
+
+Plataforma de fichas da campanha de Marcus. Primeira entrega: fundação, autenticação real sem e-mail, convites temporários de mestre, dashboard e rascunhos persistidos no MySQL. **Ainda não inclui regras mecânicas, inventário ou administração de campanhas.** O manual e a ficha oficial não foram anexados nesta sessão; nenhum atributo ou fórmula foi inventado.
+
+## Tecnologias e organização
+
+Node.js 24 LTS, React 19, TypeScript, Vite, React Router, Tailwind CSS, TanStack Query, React Hook Form, Zod, Lucide, Express 5, Prisma 7 e MySQL 8.4 LTS. Versões exatas em `package-lock.json`.
+
+```text
+apps/web             React e componentes reutilizáveis
+apps/api             API REST, segurança e comandos de servidor
+packages/shared      Contratos Zod e DTOs públicos
+packages/rpg-rules   Regras versionadas (aguarda manual)
+prisma               Modelos e migrações SQL versionadas
+tests                Unitários, integração MySQL e E2E
+docs                 Requisitos, decisões, operação e progresso
+```
+
+## Instalar e executar
+
+1. Instale Git, Node 24 e MySQL 8.4 (ou Docker Compose para desenvolvimento).
+2. Clone o repositório quando houver uma URL remota, ou extraia o pacote de transferência. Entre na pasta do projeto.
+3. Execute `npm ci` e `cp .env.example .env` (no PowerShell: `Copy-Item .env.example .env`). Preencha segredos locais, a URL MySQL e a origem web. Use senha de banco dedicada, diferente da senha dos usuários da aplicação.
+4. Gere `CSRF_SECRET`: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` e coloque o resultado somente no `.env`.
+5. Se usar Compose, preencha também `MYSQL_PASSWORD` e `MYSQL_ROOT_PASSWORD`; execute `docker compose -f compose.dev.yml up -d`. Faça a senha em DATABASE_URL coincidir com MYSQL_PASSWORD. A URL exige codificação de caracteres especiais.
+6. Execute `npm run db:generate` e `npm run db:deploy`. A migração inicial já está versionada; `db:migrate` é para desenvolver migrações novas e pode precisar de banco sombra separado.
+7. Execute `npm run dev`. Frontend: http://localhost:5173. API: http://localhost:3000/api/health. Vite encaminha `/api` para o Express. Abra sempre pelo frontend.
+8. Para a primeira conta administrativa, execute `npm run admin:create` num terminal interativo seguro do servidor. A senha tem entrada oculta; códigos de recuperação aparecem apenas ao concluir. Não informe senhas por argumento de comando.
+
+O diretório de trabalho deve ser a raiz do monorepositório. O cadastro normal já funciona sem administrador. Para habilitar Marcus como mestre, o ADMIN gera um convite no painel e Marcus o utiliza no cadastro. Isso habilita a futura criação de campanhas; não concede poder global nem acesso a fichas alheias. Convites para contas já existentes serão tratados em etapa posterior.
+
+## Comandos
+
+| Comando | Uso |
+|---|---|
+| `npm run dev` | API e frontend em desenvolvimento |
+| `npm run typecheck` | Verificação de tipos |
+| `npm test` | Testes unitários sem banco |
+| `npm run test:integration` | Testes reais com banco MySQL de teste dedicado |
+| `npm run test:e2e` | Fluxos Chromium desktop e celular |
+| `npm run build` | Frontend e API compilados |
+| `npm start` | Servidor compilado; NODE_ENV=production serve também o frontend |
+| `npm run db:generate` | Gerar cliente Prisma |
+| `npm run db:validate` | Validar schema Prisma |
+| `npm run db:deploy` | Aplicar migrações versionadas |
+| `npm run db:test:deploy` | Aplicar migrações somente no banco de teste configurado |
+| `npm run db:migrate -- --name descricao` | Criar migração em desenvolvimento |
+| `npm run admin:create` | Criar somente o primeiro ADMIN no servidor |
+| `npm run admin:recover` | Emitir código após verificação de identidade documentada |
+
+## Testar com MySQL
+
+Copie `.env.test.example` para `.env.test` e preencha com `NODE_ENV=test`, DATABASE_URL apontando para um banco **dedicado** cujo nome termine em `_test`, APP_ORIGIN=http://localhost:5173 e CSRF_SECRET aleatório. Nunca use banco de jogadores nos testes. Os testes de integração apagam somente seus registros `it_*`; o E2E deixa registros sintéticos `e2e_*` no banco descartável. A guarda impede rodar em nomes sem `_test`, mas não substitui conferir host e credenciais.
+
+Aplique primeiro a migração no banco de teste com `npm run db:test:deploy`, que carrega `.env.test` e valida a guarda de ambiente antes de chamar o Prisma. Não copie credenciais de produção. `npm exec -- playwright install chromium` instala o navegador necessário (sistemas Linux podem precisar das dependências nativas do Playwright). Em seguida execute integração e E2E. O Playwright sobe os dois servidores e não reaproveita processos já existentes.
+
+## Continuidade e publicação
+
+- [Progresso e próximos passos](docs/PROGRESSO.md)
+- [Requisitos RF, RNF e RN](docs/REQUISITOS.md)
+- [Arquitetura e limites de segurança](docs/ARQUITETURA.md)
+- [Contrato da API](docs/API.md)
+- [Publicação no Render](docs/PUBLICACAO.md)
+- [Backup e recuperação](docs/OPERACAO.md)
+- [Informações pendentes do manual](docs/PENDENCIAS_MANUAL.md)
+- [Resultados de validação](docs/VALIDACAO.md)
+
+Ainda não existe repositório remoto fornecido pelo proprietário. Um commit local e o pacote de transferência não se sincronizam automaticamente com o PC. Após criar um repositório vazio privado, execute `git remote add origin <URL>` e `git push -u origin main`; no PC, clone essa URL. Nunca envie `.env`, dumps, códigos de recuperação ou arquivos de relatório com credenciais.

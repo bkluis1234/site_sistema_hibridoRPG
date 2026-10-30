@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": ["node"],
+    "noUncheckedIndexedAccess": true
+  },
+  "include": [
+    "apps/api/src/**/*.ts",
+    "packages/**/*.ts",
+    "tests/**/*.ts",
+    "prisma.config.ts",
+    "vitest*.ts"
+  ],
+  "exclude": ["apps/web", "**/dist/**", "playwright.config.ts", "tests/e2e/**"]
+}
