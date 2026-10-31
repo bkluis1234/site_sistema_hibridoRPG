@@ -1,7 +1,7 @@
 {
   "name": "sistema-hibrido",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "type": "module",
   "workspaces": [
     "apps/*",
@@ -24,7 +24,13 @@
     "admin:create": "tsx apps/api/src/admin-cli.ts",
     "start": "node apps/api/dist/apps/api/src/server.js",
     "admin:recover": "tsx apps/api/src/recovery-cli.ts",
-    "db:test:deploy": "node scripts/test-db.mjs"
+    "db:test:deploy": "node scripts/test-db.mjs",
+    "security:secrets": "node scripts/check-secrets.mjs",
+    "db:check": "tsx scripts/check-database.ts",
+    "audit:database": "node scripts/audit-database.mjs",
+    "audit:load": "tsx scripts/audit-load.ts",
+    "audit:load:compiled": "node scripts/audit-load-compiled.mjs",
+    "start:render": "node --max-old-space-size=192 apps/api/dist/apps/api/src/server.js"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

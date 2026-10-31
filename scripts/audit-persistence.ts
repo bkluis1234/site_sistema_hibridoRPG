@@ -187,11 +187,21 @@ try {
     writeFileSync(manifest, JSON.stringify({ names, id, attributes }), {
       mode: 0o600,
     });
+    assert.equal(
+      (
+        await primary.send(
+          "/help/progress/jogador",
+          { completed: true },
+          "PATCH",
+        )
+      ).status,
+      200,
+    );
     console.log(
       JSON.stringify({
         audit: "prepare",
         status: "passed",
-        steps: 17,
+        steps: 18,
         mysql: "verified",
         secondClientDenied: true,
       }),
@@ -222,6 +232,12 @@ try {
       assert.equal(result.body.sheet.conditions.bleeding, true);
       assert.equal(result.body.sheet.conditions.fatigue, 1);
       assert.equal((await fresh.a.get("/api/ready")).status, 200);
+      assert.equal(
+        (await fresh.a.get("/api/help")).body.progress.find(
+          (p: { guideKey: string }) => p.guideKey === "jogador",
+        )?.completed,
+        true,
+      );
       console.log(
         JSON.stringify({
           audit: "after_mysql_and_api_restart",
@@ -233,6 +249,7 @@ try {
           resources: true,
           inventory: true,
           conditions: true,
+          tutorial: true,
         }),
       );
     } else if (mode === "cleanup") {

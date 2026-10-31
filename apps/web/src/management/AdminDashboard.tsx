@@ -1,3 +1,5 @@
+import { label } from "../locale";
+import { formatDate } from "../locale";
 import { useEffect, useState } from "react";
 import { Link, useOutletContext } from "react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -96,9 +98,7 @@ export function PrivilegedInviteManager() {
         <article className="invite-row" key={i.id}>
           <div>
             <strong>Convite {i.id.slice(0, 8)}</strong>
-            <small>
-              Expira {new Date(i.expiresAt).toLocaleString("pt-BR")}
-            </small>
+            <small>Expira {formatDate(i.expiresAt, "datetime")}</small>
           </div>
           <span className="tag neutral">
             {i.usedAt ? "Utilizado" : i.revokedAt ? "Revogado" : "Pendente"}
@@ -493,7 +493,7 @@ export function AdminDashboard() {
               <article className="admin-campaign" key={u.id}>
                 <div>
                   <strong>{u.username}</strong>
-                  <p>{u.role}</p>
+                  <p>{label(u.role)}</p>
                 </div>
                 <button
                   className="button secondary"
@@ -542,7 +542,7 @@ export function AdminDashboard() {
                 <div>
                   <strong>{m.user.username}</strong>
                   <p>
-                    {m.role} · {statusLabel(m.status)}
+                    {label(m.role)} · {statusLabel(m.status)}
                   </p>
                 </div>
                 <button

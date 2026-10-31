@@ -71,6 +71,7 @@ import {
   type CharacterSummary,
 } from "../../../packages/shared/src/index";
 import { api, ApiError } from "./api";
+import { RouteBoundary } from "./RouteBoundary";
 import {
   HorrorPanel,
   SectionHeader,
@@ -81,12 +82,32 @@ import {
   SaveStatus,
 } from "./components";
 import "./styles.css";
-import { CharacterSheet } from "./sheet/CharacterSheet";
-import { CampaignsPage } from "./management/Campaigns";
-import { CampaignDashboard } from "./management/CampaignDashboard";
-import { SharedCharacterView } from "./management/SharedCharacter";
-import { GMCharacterEditor } from "./management/GMCharacterEditor";
-import { AdminDashboard } from "./management/AdminDashboard";
+const CharacterSheet = lazy(() =>
+  import("./sheet/CharacterSheet").then((m) => ({ default: m.CharacterSheet })),
+);
+const CampaignsPage = lazy(() =>
+  import("./management/Campaigns").then((m) => ({ default: m.CampaignsPage })),
+);
+const CampaignDashboard = lazy(() =>
+  import("./management/CampaignDashboard").then((m) => ({
+    default: m.CampaignDashboard,
+  })),
+);
+const SharedCharacterView = lazy(() =>
+  import("./management/SharedCharacter").then((m) => ({
+    default: m.SharedCharacterView,
+  })),
+);
+const GMCharacterEditor = lazy(() =>
+  import("./management/GMCharacterEditor").then((m) => ({
+    default: m.GMCharacterEditor,
+  })),
+);
+const AdminDashboard = lazy(() =>
+  import("./management/AdminDashboard").then((m) => ({
+    default: m.AdminDashboard,
+  })),
+);
 import { NotificationsBell } from "./management/Notifications";
 import "./management/management.css";
 const SessionsPage = lazy(() =>
@@ -94,6 +115,9 @@ const SessionsPage = lazy(() =>
 );
 const SessionRoom = lazy(() =>
   import("./game/SessionRoom").then((m) => ({ default: m.SessionRoom })),
+);
+const HelpPage = lazy(() =>
+  import("./HelpPage").then((m) => ({ default: m.HelpPage })),
 );
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -117,10 +141,10 @@ function Brand() {
   return (
     <span className="brand">
       <span className="brand-symbol">
-        H<span>†</span>
+        O<span>†</span>
       </span>
       <span>
-        SISTEMA HÍBRIDO
+        ORIGEM
         <small>
           ARQUIVO DE SOBREVIVENTES <b>2.6</b>
         </small>
@@ -177,10 +201,12 @@ function Field({
 function PasswordInput({
   registration,
   id = "password",
+  autoComplete = "new-password",
   ...a11y
 }: {
   registration: ReturnType<ReturnType<typeof useForm>["register"]>;
   id?: string;
+  autoComplete?: "current-password" | "new-password";
   "aria-describedby"?: string;
   "aria-invalid"?: boolean;
 }) {
@@ -192,9 +218,7 @@ function PasswordInput({
         {...a11y}
         id={id}
         type={show ? "text" : "password"}
-        autoComplete={
-          id === "password-login" ? "current-password" : "new-password"
-        }
+        autoComplete={autoComplete}
         maxLength={128}
       />
       <button
@@ -297,6 +321,7 @@ function Login() {
             <PasswordInput
               registration={f.register("password")}
               id="password-login"
+              autoComplete="current-password"
             />
           </Field>
           <div className="form-row">
@@ -537,7 +562,7 @@ function RecoveryCodes() {
     const url = URL.createObjectURL(
       new Blob(
         [
-          "Sistema Híbrido — códigos de recuperação de uso único. Guarde em local seguro.\n\n" +
+          "Origem — códigos de recuperação de uso único. Guarde em local seguro.\n\n" +
             codes.join("\n"),
         ],
         { type: "text/plain" },
@@ -590,6 +615,7 @@ function RecoveryCodes() {
   );
 }
 function Shell() {
+  const { setCodes } = useContext(RecoveryContext);
   const me = useMe();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -599,6 +625,7 @@ function Shell() {
     mutationFn: () => api("/auth/logout", { method: "POST" }),
     onSuccess: () => {
       qc.clear();
+      setCodes([]);
       navigate("/login");
     },
   });
@@ -620,20 +647,29 @@ function Shell() {
     { to: "/", label: "Visão geral", icon: LayoutDashboard },
     { to: "/campaigns", label: "Campanhas", icon: Users },
     { to: "/profile", label: "Meu perfil", icon: Settings },
+    { to: "/help", label: "Central de ajuda", icon: BookOpen },
   ];
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#conteudo-principal">
+        Ir para o conteúdo
+      </a>
       <header className="mobile-header">
         <Brand />
         <button
           className="icon-button"
           aria-label={open ? "Fechar menu" : "Abrir menu"}
+          aria-expanded={open}
+          aria-controls="navegacao-lateral"
           onClick={() => setOpen(!open)}
         >
           {open ? <X /> : <Menu />}
         </button>
       </header>
-      <aside className={"sidebar " + (open ? "open" : "")}>
+      <aside
+        id="navegacao-lateral"
+        className={"sidebar " + (open ? "open" : "")}
+      >
         <Link to="/" className="brand-link" onClick={() => setOpen(false)}>
           <Brand />
         </Link>
@@ -716,14 +752,18 @@ function Shell() {
           </span>
           <NotificationsBell />
           <span className="topbar-version">
-            SISTEMA HÍBRIDO <b>2.6</b>
+            ORIGEM <b>RPG</b>
           </span>
         </header>
-        <div className="page-content">
-          <Outlet context={{ user }} />
+        <div className="page-content" id="conteudo-principal" tabIndex={-1}>
+          <RouteBoundary key={loc.pathname}>
+            <Suspense fallback={<Loading />}>
+              <Outlet context={{ user }} />
+            </Suspense>
+          </RouteBoundary>
         </div>
         <footer className="app-footer">
-          <span>SISTEMA HÍBRIDO 2.6</span>
+          <span>ORIGEM · Sistema Híbrido 2.6</span>
           <span>Uma história de cada vez.</span>
         </footer>
       </main>
@@ -806,7 +846,7 @@ function Dashboard() {
       </div>
       <div className="intro-banner">
         <div>
-          <span className="eyebrow">BEM-VINDO AO SISTEMA HÍBRIDO 2.6</span>
+          <span className="eyebrow">BEM-VINDO AO ORIGEM</span>
           <h2>
             A sessão termina.
             <br />
@@ -902,11 +942,13 @@ function Dashboard() {
               <div>
                 <h3>Nenhuma campanha vinculada.</h3>
                 <p>
-                  Criação de campanhas e convites de jogadores chegam na etapa
-                  3.
+                  Abra Campanhas para criar uma campanha autorizada ou usar um
+                  convite do mestre.
                 </p>
               </div>
-              <span className="tag neutral">EM PREPARAÇÃO</span>
+              <Link className="text-link" to="/campaigns">
+                Abrir campanhas
+              </Link>
             </div>
           </HorrorPanel>
         )
@@ -1006,6 +1048,7 @@ function App() {
             element={<SharedCharacterView />}
           />
           <Route path="profile" element={<Profile />} />
+          <Route path="help" element={<HelpPage />} />
           <Route path="admin" element={<AdminDashboard />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

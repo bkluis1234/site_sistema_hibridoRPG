@@ -1,3 +1,5 @@
+import { formatDate } from "./locale";
+import { label } from "./locale";
 import { type ReactNode } from "react";
 import { Link } from "react-router";
 import {
@@ -75,21 +77,13 @@ export function CharacterCard({ character }: { character: CharacterSummary }) {
       </div>
       <div className="card-body">
         <div className="card-meta">
-          <span className="tag">
-            {character.status === "DRAFT"
-              ? "Rascunho"
-              : character.status === "APPROVED"
-                ? "Aprovado"
-                : "Arquivado"}
-          </span>
+          <span className="tag">{label(character.status)}</span>
           <span>V{character.version.toString().padStart(2, "0")}</span>
         </div>
         <h3>{character.name}</h3>
         <p>{character.concept || "Uma história ainda por escrever."}</p>
         <div className="card-footer">
-          <span>
-            {new Date(character.updatedAt).toLocaleDateString("pt-BR")}
-          </span>
+          <span>{formatDate(character.updatedAt, "date")}</span>
           <span>
             Abrir ficha <ArrowUpRight size={16} />
           </span>

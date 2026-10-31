@@ -1,3 +1,5 @@
+import { label } from "../locale";
+import { formatDate } from "../locale";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router";
 import {
@@ -198,12 +200,9 @@ export function AuditTimeline({ entries }: { entries: AuditEntry[] }) {
         <li key={e.id}>
           <div className="audit-dot" />
           <div>
-            <strong>
-              {e.action.replaceAll("_", " ").toLocaleLowerCase("pt-BR")}
-            </strong>
+            <strong>{label(e.action)}</strong>
             <p>
-              {e.actor.username} ·{" "}
-              {new Date(e.createdAt).toLocaleString("pt-BR")}
+              {e.actor.username} · {formatDate(e.createdAt, "datetime")}
             </p>
             {e.reason && <p>{e.reason}</p>}
             {Boolean(e.beforeData || e.afterData) && (

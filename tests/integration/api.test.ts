@@ -1,5 +1,14 @@
 import { cleanupUsers } from "../helpers/cleanup.js";
-import { beforeAll, afterAll, beforeEach, describe, it, expect } from "vitest";
+import {
+  beforeAll,
+  afterAll,
+  beforeEach,
+  describe,
+  it,
+  expect,
+  vi,
+} from "vitest";
+import * as security from "../../apps/api/src/security.js";
 import request from "supertest";
 import { config as dotenv } from "dotenv";
 import { randomBytes } from "node:crypto";
@@ -96,6 +105,117 @@ afterAll(async () => {
 });
 
 describe("cadastro, sessões e autorização", () => {
+  it("não cria sessão com senha verificada antes de uma recuperação concorrente", async () => {
+    const a = await register();
+    const b = await client();
+    const recovery = await client();
+    const original = security.verifyPassword;
+    const spy = vi
+      .spyOn(security, "verifyPassword")
+      .mockImplementationOnce(async (hash, password) => {
+        const valid = await original(hash, password);
+        const reset = await recovery.post("/auth/recover", {
+          username: a.username,
+          recoveryCode: a.codes[0],
+          password: "nova frase sintetica de recuperacao",
+          confirmPassword: "nova frase sintetica de recuperacao",
+        });
+        expect(reset.status).toBe(200);
+        return valid;
+      });
+    try {
+      const response = await b.post("/auth/login", {
+        username: a.username,
+        password: pass,
+      });
+      expect(response.status).toBe(401);
+      expect(response.headers["set-cookie"]).toBeUndefined();
+      expect(await db.session.count({ where: { userId: a.user.id } })).toBe(0);
+      expect((await b.agent.get("/api/auth/me")).status).toBe(401);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+  it("nega login quando a conta é desativada durante a verificação da senha", async () => {
+    const a = await register(),
+      b = await client();
+    const original = security.verifyPassword;
+    const spy = vi
+      .spyOn(security, "verifyPassword")
+      .mockImplementationOnce(async (hash, password) => {
+        const valid = await original(hash, password);
+        await db.user.update({
+          where: { id: a.user.id },
+          data: { disabledAt: new Date(), version: { increment: 1 } },
+        });
+        return valid;
+      });
+    try {
+      expect(
+        (await b.post("/auth/login", { username: a.username, password: pass }))
+          .status,
+      ).toBe(401);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+  it("código temporário expirado não recupera conta nem revoga sessão legítima", async () => {
+    const a = await register();
+    await db.recoveryCode.updateMany({
+      where: { userId: a.user.id },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
+    const b = await client();
+    expect(
+      (
+        await b.post("/auth/recover", {
+          username: a.username,
+          recoveryCode: a.codes[0],
+          password: pass,
+          confirmPassword: pass,
+        })
+      ).status,
+    ).toBe(400);
+    expect((await a.agent.get("/api/auth/me")).status).toBe(200);
+  });
+  it("ajuda persiste progresso por conta e rejeita tentativa de alterar outro usuário", async () => {
+    expect((await request(app).get("/api/help")).status).toBe(401);
+    const a = await register(),
+      b = await register();
+    expect((await a.agent.get("/api/help")).body.guides).toHaveLength(3);
+    expect(
+      (await a.patch("/help/progress/jogador", { completed: true })).status,
+    ).toBe(200);
+    expect((await a.agent.get("/api/help")).body.progress[0].completed).toBe(
+      true,
+    );
+    expect((await b.agent.get("/api/help")).body.progress).toEqual([]);
+    expect(
+      (
+        await b.patch("/help/progress/jogador", {
+          completed: true,
+          userId: a.user.id,
+        })
+      ).status,
+    ).toBe(400);
+    expect(
+      (await b.patch("/help/progress/inexistente", { completed: true })).status,
+    ).toBe(400);
+  });
+  it("rejeita payload excessivo ou JSON inválido sem expor valores nem stack", async () => {
+    const a = await client();
+    const large = await a.post("/auth/register", {
+      username: "x".repeat(140000),
+    });
+    expect(large.status).toBe(413);
+    expect(large.body).not.toHaveProperty("stack");
+    const malformed = await a.agent
+      .post("/api/auth/login")
+      .set("Content-Type", "application/json")
+      .send('{"username":');
+    expect(malformed.status).toBe(400);
+    expect(malformed.body.error.message).toBe("Requisição inválida.");
+  });
   it("RF-001/005: cadastro transacional cria rascunho, códigos e auditoria no MySQL", async () => {
     const a = await register({ characterName: "Sobrevivente" });
     expect(a.user.role).toBe("PLAYER");

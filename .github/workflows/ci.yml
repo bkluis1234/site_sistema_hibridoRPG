@@ -1,0 +1,63 @@
+name: Qualidade e segurança
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: "${{ github.run_id }}-${{ github.run_attempt }}-synthetic-ci-only"
+          MYSQL_DATABASE: origem_ci_test
+        ports: ["127.0.0.1:3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    env:
+      NODE_ENV: test
+      DATABASE_URL: mysql://root:${{ github.run_id }}-${{ github.run_attempt }}-synthetic-ci-only@127.0.0.1:3306/origem_ci_test
+      DATABASE_SSL: "false"
+      APP_ORIGIN: http://localhost:5173
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --include=dev
+      - name: Preparar ambiente sintético
+        run: |
+          node --input-type=module <<'JS'
+          import { randomBytes } from 'node:crypto';
+          import { writeFileSync } from 'node:fs';
+          const secret = randomBytes(32).toString('hex');
+          console.log(`::add-mask::${secret}`);
+          const env = `CSRF_SECRET=${secret}\n`;
+          writeFileSync(process.env.GITHUB_ENV, env, { flag: 'a' });
+          writeFileSync('.env.test', `NODE_ENV=test\nDATABASE_URL=${process.env.DATABASE_URL}\nDATABASE_SSL=false\nAPP_ORIGIN=${process.env.APP_ORIGIN}\n${env}`, { mode: 0o600 });
+          JS
+      - run: npm run security:secrets
+      - run: npm audit --audit-level=moderate
+      - run: npm run db:generate
+      - run: npm run db:test:deploy
+      - run: npm run db:validate
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:integration
+      - run: npm run build
+      - run: npm exec -- playwright install --with-deps chromium
+      - run: npm run test:e2e

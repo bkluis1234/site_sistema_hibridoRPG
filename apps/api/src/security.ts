@@ -5,19 +5,26 @@ import {
   timingSafeEqual,
 } from "node:crypto";
 import argon2 from "argon2";
+import { PasswordWork } from "./password-work.js";
+const passwordWork = new PasswordWork();
 export const randomToken = () => randomBytes(32).toString("base64url");
 // SHA-256 é apropriado aqui para segredos aleatórios de 256 bits; senhas usam Argon2id.
 export const tokenHash = (value: string) =>
   createHash("sha256").update(value).digest("hex");
 export const hashPassword = (password: string) =>
-  argon2.hash(password, {
-    type: argon2.argon2id,
-    memoryCost: 65536,
-    timeCost: 3,
-    parallelism: 1,
-  });
+  passwordWork.run(() =>
+    argon2.hash(password, {
+      type: argon2.argon2id,
+      memoryCost: 65536,
+      timeCost: 3,
+      parallelism: 1,
+    }),
+  );
 export const verifyPassword = (hash: string, password: string) =>
-  argon2.verify(hash, password);
+  passwordWork.run(() => argon2.verify(hash, password));
+let dummyHash: Promise<string> | undefined;
+export const dummyPasswordHash = () =>
+  (dummyHash ??= hashPassword(randomToken()));
 export function issueCsrf(secret: string) {
   const nonce = randomToken();
   return (

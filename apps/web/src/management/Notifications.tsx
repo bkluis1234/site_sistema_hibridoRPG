@@ -1,3 +1,4 @@
+import { formatDate } from "../locale";
 import { useState } from "react";
 import { Link } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -47,7 +48,7 @@ export function NotificationsBell() {
             <article key={n.id} className={n.readAt ? "read" : ""}>
               <Link to={n.linkPath} onClick={() => setOpen(false)}>
                 {n.message}
-                <small>{new Date(n.createdAt).toLocaleString("pt-BR")}</small>
+                <small>{formatDate(n.createdAt, "datetime")}</small>
               </Link>
               {!n.readAt && (
                 <button

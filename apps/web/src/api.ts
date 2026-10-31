@@ -77,5 +77,11 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
       body?.error?.message ?? "Não foi possível concluir a operação.",
     );
   }
+  if (body === null || typeof body !== "object")
+    throw new ApiError(
+      503,
+      "INVALID_RESPONSE",
+      "O servidor ainda não confirmou a operação. Aguarde e tente novamente.",
+    );
   return body as T;
 }

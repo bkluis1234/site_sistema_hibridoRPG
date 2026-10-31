@@ -35,3 +35,8 @@ SSE consulta o banco por conexão; medir capacidade/custo com o grupo real. Meta
 Rate limits: borda 12.000 requests/IP/15 min; conta autenticada 600 requests/15 min na API comum e 2.400/15 min nas rotas de jogo. Sem conta válida, cota por IP continua 600/15 min. Tentativas de credenciais mantêm 40/IP/15 min e 12/login/15 min; /auth/me e /csrf não consomem a cota de tentativas de senha. O grupo no mesmo Wi-Fi não divide a cota de uma única conta. Identidade do limitador vem da sessão verificada, nunca de header fornecido pelo usuário. Stores/caps ainda são locais ao processo: antes de escalar, adotar store compartilhado e testar topologia/proxy.
 
 Render deve servir React/API na mesma origem HTTPS; MySQL gerenciado externo persistente com TLS. Conferir buffering/timeout/reconexão no plano real; não há publicação validada nesta entrega. Conexões SSE serão encerradas no desligamento do processo e os clientes recuperarão pelo MySQL. Limpeza agendada de presenças/eventos/operacoes e retenção exigem política antes da produção. Não apagar histórico para resolver conexão instável.
+
+
+## Limites reforçados na Parte 5
+
+Há quatro streams por conta e cem por processo, com reserva/liberação idempotentes. Backpressure fecha a conexão inclusive no heartbeat; reconexão recupera o estado pelo MySQL. Cada stream é rotacionado após trinta minutos. Intervalo de revalidação de autorização continua dois segundos; revogação não é instantânea. Shutdown fecha todos os streams. O limite de recebimento HTTP de trinta segundos não é limite da duração da resposta SSE já iniciada. Antes de múltiplas réplicas, revisar rate limit, orçamento de conexões, métricas e limites globais em infraestrutura compartilhada.

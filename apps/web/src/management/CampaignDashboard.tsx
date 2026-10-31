@@ -1,3 +1,4 @@
+import { formatDate } from "../locale";
 import { useState, useEffect } from "react";
 import { Link, useParams, useLocation } from "react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -166,7 +167,7 @@ export function InviteManager({ campaignId }: { campaignId: string }) {
               <strong>Convite {i.id.slice(0, 8)}</strong>
               <small>
                 {i.useCount}/{i.maxUses} usos · expira{" "}
-                {new Date(i.expiresAt).toLocaleString("pt-BR")}
+                {formatDate(i.expiresAt, "datetime")}
               </small>
             </div>
             <span className="tag neutral">

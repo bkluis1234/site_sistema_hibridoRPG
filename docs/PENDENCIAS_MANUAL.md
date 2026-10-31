@@ -14,4 +14,4 @@ O Manual Híbrido 2.6 completo continua ausente. Não foi inventada nenhuma mec�
 - Política de exceções de carga/máximos e aprovação mecânica da Parte 3.
 - Exemplos completos de fichas/testes aprovados por Marcus para conferência independente das instruções.
 
-Retrato necessita um provedor de storage persistente antes de salvar imagem. Repositório remoto privado e infraestrutura de produção também continuam pendentes.
+Retrato necessita um provedor de storage persistente antes de salvar imagem. O repositório público está publicado no GitHub. A infraestrutura de produção continua pendente de configuração e autorização.

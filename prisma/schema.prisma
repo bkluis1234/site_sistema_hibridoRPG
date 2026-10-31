@@ -79,6 +79,7 @@ model User {
   notifications        Notification[]
   managementOperations ManagementOperation[]
   adminAuthorizations  AdminAuthorization[]
+  tutorialProgress     TutorialProgress[]
 
   hostedGameSessions GameSession[]        @relation("gameHost")
   gameParticipations SessionParticipant[]
@@ -116,11 +117,25 @@ model RecoveryCode {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   codeHash  String    @unique @db.Char(64)
   usedAt    DateTime?
+  expiresAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
   @@index([userId, usedAt])
   @@map("recovery_codes")
+}
+
+model TutorialProgress {
+  id        String   @id @default(uuid()) @db.Char(36)
+  userId    String   @db.Char(36)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guideKey  String   @db.VarChar(40)
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, guideKey])
+  @@map("tutorial_progress")
 }
 
 model PrivilegeInvite {

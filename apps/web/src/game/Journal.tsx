@@ -1,3 +1,4 @@
+import { formatDate } from "../locale";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -162,8 +163,7 @@ export function SessionJournal({
             <h3>{n.title}</h3>
             <p className="session-prose">{n.body}</p>
             <small>
-              {n.author.username} ·{" "}
-              {new Date(n.updatedAt).toLocaleString("pt-BR")}
+              {n.author.username} · {formatDate(n.updatedAt, "datetime")}
             </small>
             {!closed &&
               (n.authorId === userId || (gm && n.visibility !== "PRIVATE")) && (
@@ -279,7 +279,7 @@ export function SessionTimeline({
               <h3>{eventLabels[event.type] ?? "Atualização registrada"}</h3>
               <p className="small muted">
                 {event.author.username} ·{" "}
-                {new Date(event.createdAt).toLocaleString("pt-BR")} ·{" "}
+                {formatDate(event.createdAt, "datetime")} ·{" "}
                 {visibilityLabels[event.visibility]}
               </p>
               {event.data.characterName && (

@@ -1,3 +1,4 @@
+import { formatDate } from "../locale";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useSheetClient } from "./client";
 import { ErrorBox } from "../components";
@@ -46,13 +47,11 @@ export function HistoryPanel({ id }: { id: string }) {
               <div className="audit-dot" />
               <div>
                 <strong>
-                  {historyLabels[e.action] ??
-                    e.action.replaceAll("_", " ").toLowerCase()}
+                  {historyLabels[e.action] ?? "Alteração registrada"}
                 </strong>
                 <p>
-                  {e.actor.username} ·{" "}
-                  {new Date(e.createdAt).toLocaleString("pt-BR")} · versão{" "}
-                  {e.recordVersion}
+                  {e.actor.username} · {formatDate(e.createdAt, "datetime")} ·
+                  versão {e.recordVersion}
                 </p>
                 {e.reason && <p>Justificativa: {e.reason}</p>}
                 {Boolean(e.beforeData || e.afterData) && (

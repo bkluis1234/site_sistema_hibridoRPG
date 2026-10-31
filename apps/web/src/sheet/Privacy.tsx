@@ -1,3 +1,4 @@
+import { label } from "../locale";
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -151,7 +152,7 @@ export function PrivacyPanel({
               className={"note " + n.visibility.toLowerCase()}
               key={n.id}
             >
-              <span className="tag">{n.visibility}</span>
+              <span className="tag">{label(n.visibility)}</span>
               <h3>{n.title}</h3>
               <p>{n.body}</p>
               <div className="form-buttons">
@@ -436,7 +437,7 @@ export function ChangeRequestPanel({
       <ErrorBox error={query.error} />
       {query.data?.requests.map((r) => (
         <article className="request-history" key={r.id}>
-          <span className="tag">{r.status}</span>
+          <span className="tag">{label(r.status)}</span>
           <h3>{r.kind === "ATTRIBUTES" ? "Atributos" : "Treinamentos"}</h3>
           <p>{r.reason}</p>
           {r.reviewComment && <p>Resposta do mestre: {r.reviewComment}</p>}

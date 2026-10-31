@@ -1673,3 +1673,10 @@ td {
     scroll-behavior: auto !important;
   }
 }
+.help-guides { display: grid; gap: 24px; }
+.help-steps { padding-left: 24px; line-height: 1.8; }
+.help-steps li { padding: 0 0 12px 6px; }
+.skip-link { position: fixed; left: 12px; top: -100px; z-index: 100; padding: 12px; background: #f5f1eb; color: #111; }
+.skip-link:focus { top: 12px; }
+:focus-visible { outline: 3px solid #e8b877; outline-offset: 3px; }
+.help-guides .button { white-space: normal; }

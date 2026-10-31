@@ -1,3 +1,4 @@
+import { formatDate } from "../locale";
 import { useState } from "react";
 import { Dices, Lock, ShieldCheck } from "lucide-react";
 import type { SheetDetails } from "../../../../packages/shared/src/index";
@@ -289,8 +290,7 @@ export function SessionRollHistory({
               </span>
             </div>
             <p className="small muted">
-              {r.user.username} ·{" "}
-              {new Date(r.createdAt).toLocaleTimeString("pt-BR")}
+              {r.user.username} · {formatDate(r.createdAt, "time")}
             </p>
             <div className="roll-numbers">
               <strong>

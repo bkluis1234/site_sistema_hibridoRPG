@@ -1,3 +1,4 @@
+import { formatDate } from "../locale";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { ShieldCheck, HeartPulse, BookOpen } from "lucide-react";
@@ -648,7 +649,7 @@ export function SummaryPanel({
         <>
           <p>
             {summary.campaign.name} · {summary.session.title} ·{" "}
-            {new Date(summary.session.finishedAt).toLocaleString("pt-BR")}
+            {formatDate(summary.session.finishedAt, "datetime")}
           </p>
           {summary.session.narrativeSummary && (
             <p className="session-prose">{summary.session.narrativeSummary}</p>

@@ -11,6 +11,15 @@ playwright-report/
 *.tgz
 .DS_Store
 backup*.sql
+*.sql
+!prisma/migrations/**/migration.sql
+*.pem
+*.key
+*.p12
+*.pfx
+*.cnf
+*.bak
+backups/
 *.bundle
 *.zip
 !.env.test.example

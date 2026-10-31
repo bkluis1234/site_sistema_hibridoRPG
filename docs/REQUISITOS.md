@@ -1,6 +1,6 @@
-# Requisitos — Sistema Híbrido 2.6
+# Requisitos — Origem (Sistema Híbrido 2.6)
 
-Escopo: fundação, ficha interativa, campanhas e Modo Sessão da Parte 4. P0 = essencial à base; P1 = próxima funcionalidade; P2 = expansão. Uma entidade modelada não significa funcionalidade concluída. Resultados efetivamente executados ficam em VALIDACAO.md. Testes indicados como planejados ainda não existem.
+Escopo: fundação, ficha interativa, campanhas e Modo Sessão, com hardening e ajuda da Parte 5. A matriz completa de implementação/testes/evidências/pendências está em MATRIZ_RASTREABILIDADE.md; resultados atuais em AUDITORIA_FINAL.md. P0 = essencial à base; P1 = próxima funcionalidade; P2 = expansão. Uma entidade modelada não significa funcionalidade concluída. Resultados efetivamente executados ficam em VALIDACAO.md. Testes indicados como planejados ainda não existem.
 
 ## Funcionais
 
@@ -195,3 +195,8 @@ IDs solicitados preservados. RF-043/044, RNF-026..030 e RN-032..035 ficam reserv
 | RN-050 | Sincronização não substitui regra backend | Sinal não aplica saldo no cliente; servidor valida cada operação |
 
 Resultados exatos e falhas corrigidas da Parte 4 são registrados em VALIDACAO.md. Esta tabela identifica critérios e testes; não declara infraestrutura, p95 ou todos os RNF comprovados.
+
+
+## Atualização de evidências — Parte 5
+
+MATRIZ_RASTREABILIDADE.md preserva os 147 IDs deste catálogo e acrescenta vínculos aos testes e limitações da auditoria atual. Não reutiliza IDs reservados. Os critérios históricos acima continuam referência de escopo; estados antigos devem ser lidos junto à matriz e AUDITORIA_FINAL.md. Em particular, backup/restauração e TLS têm agora ensaio local real, mas operação Aiven/Render permanece pendente. RF-024 (exportação de ficha) e RF-031 (storage de retrato) não foram declarados implementados integralmente. Nenhum requisito novo de RPG foi presumido.

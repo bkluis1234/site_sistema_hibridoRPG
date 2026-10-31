@@ -43,10 +43,19 @@ try {
       target.disabledAt
     )
       throw new Error("Contas indisponíveis.");
+    await tx.$queryRaw`SELECT id FROM users WHERE id=${target.id} FOR UPDATE`;
+    await tx.user.update({
+      where: { id: target.id },
+      data: { version: { increment: 1 } },
+    });
     await tx.session.deleteMany({ where: { userId: target.id } });
     await tx.recoveryCode.deleteMany({ where: { userId: target.id } });
     await tx.recoveryCode.create({
-      data: { userId: target.id, codeHash: tokenHash(code) },
+      data: {
+        userId: target.id,
+        codeHash: tokenHash(code),
+        expiresAt: new Date(Date.now() + 24 * 3600_000),
+      },
     });
     await tx.adminAuditLog.create({
       data: {

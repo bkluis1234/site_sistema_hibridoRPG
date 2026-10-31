@@ -26,6 +26,7 @@ import {
   issueCsrf,
   validCsrf,
   publicUser,
+  dummyPasswordHash,
 } from "./security.js";
 
 import { HttpError } from "./errors.js";
@@ -33,6 +34,7 @@ import { initializeSheet } from "./sheet-service.js";
 import { mountGameRoutes } from "./game-routes.js";
 import { mountSheetRoutes } from "./sheet-routes.js";
 import { mountManagementRoutes } from "./management-routes.js";
+import { mountHelpRoutes } from "./help-routes.js";
 const unauthorized = () =>
   new HttpError(401, "UNAUTHENTICATED", "Entre na sua conta para continuar.");
 const characterSelect = {
@@ -57,7 +59,7 @@ export function createApp(db: PrismaClient, c: Config) {
     sameSite: "lax" as const,
     path: "/",
   };
-  const dummyHash = hashPassword(randomToken());
+  const dummyHash = dummyPasswordHash();
   app.disable("x-powered-by");
   app.set("trust proxy", c.TRUST_PROXY === "1" ? 1 : false);
   app.use(
@@ -67,7 +69,7 @@ export function createApp(db: PrismaClient, c: Config) {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
-          imgSrc: ["'self'", "data:"],
+          imgSrc: ["'self'", "data:", "blob:"],
           connectSrc: ["'self'"],
           fontSrc: ["'self'"],
           objectSrc: ["'none'"],
@@ -225,8 +227,7 @@ export function createApp(db: PrismaClient, c: Config) {
     if (typeof token !== "string" || token.length > 100) throw unauthorized();
     const session =
       (res.locals.authSession as
-        | Prisma.SessionGetPayload<{ include: { user: true } }>
-        | undefined) ??
+        Prisma.SessionGetPayload<{ include: { user: true } }> | undefined) ??
       (await db.session.findUnique({
         where: { tokenHash: tokenHash(token) },
         include: { user: true },
@@ -238,12 +239,22 @@ export function createApp(db: PrismaClient, c: Config) {
       session.user.disabledAt
     )
       throw unauthorized();
-    // Atualiza apenas expiração; nunca recria sessão revogada.
-    const active = await db.session.updateMany({
-      where: { id: session.id },
-      data: { idleExpiresAt: new Date(Date.now() + 12 * 3600_000) },
-    });
-    if (!active.count) throw unauthorized();
+    // A leitura é atual a cada requisição. Renova o prazo no máximo a cada 5 min,
+    // evitando escrita por polling/heartbeat. Nunca recria sessão revogada.
+    if (
+      session.idleExpiresAt.getTime() - Date.now() <
+      12 * 3600_000 - 5 * 60_000
+    ) {
+      const active = await db.session.updateMany({
+        where: {
+          id: session.id,
+          expiresAt: { gt: new Date() },
+          idleExpiresAt: { gt: new Date() },
+        },
+        data: { idleExpiresAt: new Date(Date.now() + 12 * 3600_000) },
+      });
+      if (!active.count) throw unauthorized();
+    }
     res.locals.user = publicUser(session.user);
     res.locals.sessionId = session.id;
     next();
@@ -353,57 +364,83 @@ export function createApp(db: PrismaClient, c: Config) {
         "INVALID_CREDENTIALS",
         "Usuário ou senha inválidos.",
       );
-    const commitCookie = await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx) => {
+      // Serializa login com recuperação/desativação e reconfere a credencial verificada.
+      await tx.$queryRaw`SELECT id FROM users WHERE id=${user.id} FOR UPDATE`;
+      const current = await tx.user.findUnique({ where: { id: user.id } });
+      if (
+        !current ||
+        current.disabledAt ||
+        current.version !== user.version ||
+        current.passwordHash !== user.passwordHash
+      )
+        throw new HttpError(
+          401,
+          "INVALID_CREDENTIALS",
+          "Usuário ou senha inválidos.",
+        );
       const previous = req.cookies[sessionCookie];
       if (typeof previous === "string")
         await tx.session.deleteMany({
           where: { tokenHash: tokenHash(previous) },
         });
-      return startSession(tx, user.id, res);
+      return {
+        user: publicUser(current),
+        commitCookie: await startSession(tx, current.id, res),
+      };
     });
-    commitCookie();
-    res.json({ user: publicUser(user) });
+    result.commitCookie();
+    res.json({ user: result.user });
   });
   app.post("/api/auth/recover", accountLimit, async (req, res) => {
     const input = recoverySchema.parse(req.body);
     const passwordHash = await hashPassword(input.password);
-    await db.$transaction(async (tx) => {
-      const user = await tx.user.findUnique({
-        where: { username: input.username },
-      });
-      if (!user || user.disabledAt)
-        throw new HttpError(
-          400,
-          "RECOVERY_INVALID",
-          "Não foi possível recuperar a conta com esses dados.",
-        );
-      const claimed = await tx.recoveryCode.updateMany({
-        where: {
-          userId: user.id,
-          codeHash: tokenHash(input.recoveryCode),
-          usedAt: null,
-        },
-        data: { usedAt: new Date() },
-      });
-      if (claimed.count !== 1)
-        throw new HttpError(
-          400,
-          "RECOVERY_INVALID",
-          "Não foi possível recuperar a conta com esses dados.",
-        );
-      await tx.user.update({
-        where: { id: user.id },
-        data: { passwordHash, version: { increment: 1 } },
-      });
-      await tx.session.deleteMany({ where: { userId: user.id } });
-      await tx.adminAuditLog.create({
-        data: {
-          actorId: user.id,
-          action: "ACCOUNT_RECOVERED",
-          targetId: user.id,
-        },
-      });
-    });
+    await db.$transaction(
+      async (tx) => {
+        const user = await tx.user.findUnique({
+          where: { username: input.username },
+        });
+        if (user)
+          await tx.$queryRaw`SELECT id FROM users WHERE id=${user.id} FOR UPDATE`;
+        const current = user
+          ? await tx.user.findUnique({ where: { id: user.id } })
+          : null;
+        if (!user || !current || current.disabledAt)
+          throw new HttpError(
+            400,
+            "RECOVERY_INVALID",
+            "Não foi possível recuperar a conta com esses dados.",
+          );
+        const claimed = await tx.recoveryCode.updateMany({
+          where: {
+            userId: user.id,
+            codeHash: tokenHash(input.recoveryCode),
+            usedAt: null,
+            OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+          },
+          data: { usedAt: new Date() },
+        });
+        if (claimed.count !== 1)
+          throw new HttpError(
+            400,
+            "RECOVERY_INVALID",
+            "Não foi possível recuperar a conta com esses dados.",
+          );
+        await tx.user.update({
+          where: { id: user.id },
+          data: { passwordHash, version: { increment: 1 } },
+        });
+        await tx.session.deleteMany({ where: { userId: user.id } });
+        await tx.adminAuditLog.create({
+          data: {
+            actorId: user.id,
+            action: "ACCOUNT_RECOVERED",
+            targetId: user.id,
+          },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+    );
     res.clearCookie(sessionCookie, cookieOptions);
     res.json({ message: "Senha alterada. Entre novamente." });
   });
@@ -507,6 +544,7 @@ export function createApp(db: PrismaClient, c: Config) {
     res.json({ character });
   });
   mountGameRoutes(app, db, auth);
+  mountHelpRoutes(app, db, auth);
   mountManagementRoutes(app, db, auth, admin);
   mountSheetRoutes(app, db, auth, c.PORTRAIT_MAX_BYTES);
   app.use("/api", (_req, _res, next) =>
@@ -519,7 +557,12 @@ export function createApp(db: PrismaClient, c: Config) {
           error: {
             code: "VALIDATION_ERROR",
             message: "Revise os campos informados.",
-            fields: error.flatten().fieldErrors,
+            fields: Object.fromEntries(
+              Object.keys(error.flatten().fieldErrors).map((key) => [
+                key,
+                ["Revise este campo."],
+              ]),
+            ),
           },
         });
       if (error instanceof HttpError)

@@ -163,3 +163,13 @@ As rotas abaixo exigem sessão de autenticação válida e membro ACTIVE na camp
 Mecânicas exigem sessão ACTIVE e ficha presente/autorizada. Diário/acontecimentos são editáveis enquanto a sessão está aberta; encerramento conserva consulta, com exceção da narrativa manual do resumo pelo GM. Histórico/paginação filtra antes de limitar; cursores secretos retornam 409 CURSOR_INVALID. Nenhuma resposta pública inclui eventSequence ou snapshot integral. Rotas legadas de rolagem excluem registros de sessão; rotas legadas de decisão recusam sessionId incompatível.
 
 Retentativa com o mesmo UUID não reaplica efeito. Mesmo UUID com conteúdo/rota diferentes gera 409. A criação de uma nova rolagem pode fechar a decisão anterior da mesma ficha; consultar a versão atual antes de gastar PE. Contratos completos em packages/shared/src/game.ts; detalhes e limites em MODO_SESSAO.md, ROLAGENS.md e SINCRONIZACAO.md.
+
+
+## Parte 5 — ajuda, credenciais e disponibilidade
+
+- GET /api/help: autenticação obrigatória; retorna os três guias e apenas o progresso da própria conta.
+- PATCH /api/help/progress/:key: key em jogador/mestre/administrador, corpo estrito `{ "completed": true }` ou false, sessão e CSRF obrigatórios. O usuário é inferido da sessão; userId enviado no corpo é recusado. Retorno contém guideKey/completed/updatedAt, sem dados de outras contas.
+- Login reconfere conta/credencial na transação; recuperação invalida sessões e a versão. Códigos reemitidos pelo operador expiram em 24 h. Os códigos offline originais conservam a política de uso único.
+- AUTH_BUSY (503): dois trabalhos Argon2 em execução e oito aguardando; cliente deve aguardar antes de tentar novamente. RATE_LIMITED (429), limites por IP/conta/usuário, permanecem independentes.
+- Erros Zod retornam mensagens públicas em português, sem reproduzir conteúdo sensível. Corpos acima de 128 KiB retornam 413. HTML temporário de cold start não é JSON válido de API nem confirmação de persistência.
+- /api/health é liveness do processo; /api/ready é readiness com SELECT 1 no MySQL. Não retornam versão do banco, credenciais ou detalhes internos.

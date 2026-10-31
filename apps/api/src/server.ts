@@ -14,6 +14,10 @@ if (config.NODE_ENV === "production") {
 const server = app.listen(config.PORT, "0.0.0.0", () =>
   console.log(JSON.stringify({ event: "server_started", port: config.PORT })),
 );
+server.headersTimeout = 15_000;
+server.requestTimeout = 30_000;
+server.keepAliveTimeout = 5_000;
+server.maxHeadersCount = 100;
 let stopping = false;
 for (const signal of ["SIGTERM", "SIGINT"] as const)
   process.on(signal, () => {

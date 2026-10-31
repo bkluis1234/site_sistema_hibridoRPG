@@ -249,7 +249,7 @@ test("mestre cria campanha, aceita jogadores, aprova ficha e alteração; colega
   await o
     .getByRole("button", { name: "Enviar solicitação de alteração" })
     .click();
-  await expect(o.getByText("PENDING", { exact: true })).toBeVisible();
+  await expect(o.getByText("Pendente", { exact: true })).toBeVisible();
   await p.reload();
   await p.getByRole("button", { name: "Solicitações", exact: true }).click();
   await p
@@ -412,7 +412,9 @@ test("ADMIN gerencia conta com senha, promove com código único e continua com 
   );
   await p.goto("/admin");
   await p.getByRole("button", { name: "Auditoria", exact: true }).click();
-  await expect(p.locator(".audit-list")).toContainText("account role changed");
+  await expect(p.locator(".audit-list")).toContainText(
+    "Papel da conta alterado",
+  );
   await p.screenshot({
     path: info.outputPath("administracao.png"),
     fullPage: true,

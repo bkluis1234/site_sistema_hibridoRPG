@@ -1,3 +1,4 @@
+import { formatDate } from "../locale";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -52,7 +53,7 @@ export function Injuries({
                     : "Resolvido"}
               </p>
               {i.consequences && <p>{i.consequences}</p>}
-              <small>{new Date(i.createdAt).toLocaleDateString("pt-BR")}</small>
+              <small>{formatDate(i.createdAt, "date")}</small>
             </div>
             <button
               className="icon-button"

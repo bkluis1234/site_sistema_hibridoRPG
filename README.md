@@ -1,6 +1,6 @@
-# Sistema Híbrido 2.6
+# Origem — Plataforma de RPG
 
-Plataforma real de fichas da campanha de Marcus. Versão 0.4.0: fundação, fichas e campanhas preservadas; Modo Sessão com rolagens compartilhadas, sobrevivência, diário, presença aproximada, SSE/reconexão e histórico MySQL. Auditoria obrigatória das Partes 1/2/3 executada antes da ampliação (docs/AUDITORIA_PARTE_4.md).
+Plataforma da campanha de Marcus, utilizando as regras do **Sistema Híbrido 2.6**. Versão 0.5.0 em desenvolvimento (checkpoint da Parte 5): contas, fichas, campanhas e Modo Sessão preservados; autenticação/TLS/SSE reforçados, interface Origem em português brasileiro e Central de Ajuda com progresso persistente. Frontend e API usam a mesma origem. **Parte 5 não concluída.** O ponto exato de retomada está em [docs/CHECKPOINT_PARTE5.md](docs/CHECKPOINT_PARTE5.md); a auditoria parcial e seus limites estão em [docs/AUDITORIA_FINAL.md](docs/AUDITORIA_FINAL.md).
 
 A imagem oficial e as regras explícitas da Parte 2 foram utilizadas. O manual completo continua pendente de conferência. **Upload persistente de imagens e publicação ainda não estão concluídos.** O seletor de imagem mostra apenas prévia local até configurar storage externo.
 
@@ -42,8 +42,11 @@ O diretório de trabalho deve ser a raiz do monorepositório. O cadastro normal 
 | `npm run test:e2e` | Fluxos Chromium desktop e celular |
 | `npm run build` | Frontend e API compilados |
 | `npm start` | Servidor compilado; NODE_ENV=production serve também o frontend |
+| `npm run start:render` | Servidor compilado com orçamento de heap para instância pequena |
 | `npm run db:generate` | Gerar cliente Prisma |
 | `npm run db:validate` | Validar schema Prisma |
+| `npm run db:check` | Confirmar conexão e TLS sem exibir credenciais |
+| `npm run security:secrets` | Verificar padrões conhecidos de segredos e arquivos sensíveis |
 | `npm run db:deploy` | Aplicar migrações versionadas |
 | `npm run db:test:deploy` | Aplicar migrações somente no banco de teste configurado |
 | `npm run db:migrate -- --name descricao` | Criar migração em desenvolvimento |
@@ -54,7 +57,7 @@ O diretório de trabalho deve ser a raiz do monorepositório. O cadastro normal 
 
 Copie `.env.test.example` para `.env.test` e preencha com `NODE_ENV=test`, DATABASE_URL apontando para um banco **dedicado** cujo nome termine em `_test`, APP_ORIGIN=http://localhost:5173 e CSRF_SECRET aleatório. Nunca use banco de jogadores nos testes. Os testes de integração apagam somente seus registros `it_*`; os testes novos de campanha/sessão também removem seus registros sintéticos `c3_*`/`e3_*`/`g4_*`/`e4_*`; os E2E anteriores deixam registros `e2e_*` no banco descartável. A guarda impede rodar em nomes sem `_test`, mas não substitui conferir host e credenciais.
 
-Aplique primeiro a migração no banco de teste com `npm run db:test:deploy`, que carrega `.env.test` e valida a guarda de ambiente antes de chamar o Prisma. Não copie credenciais de produção. `npm exec -- playwright install chromium` instala o navegador necessário (sistemas Linux podem precisar das dependências nativas do Playwright). Em seguida execute integração e E2E. O runner executa cada arquivo e perfil (desktop/mobile) com servidores novos, isolando o limite real de tentativas por IP entre dispositivos simulados. Não desativa a proteção da API. Os relatórios ficam em subpastas por arquivo/perfil de test-results e playwright-report. Resultados efetivamente executados e limites da versão atual estão em docs/VALIDACAO.md; a auditoria de entrada da Parte 4 repetiu os 125 cenários anteriores com sucesso. A regressão final tem 186 testes aprovados (78 unitários, 90 integrações MySQL e 18 E2E).
+Aplique primeiro a migração no banco de teste com `npm run db:test:deploy`, que carrega `.env.test` e valida a guarda de ambiente antes de chamar o Prisma. Não copie credenciais de produção. `npm exec -- playwright install chromium` instala o navegador necessário (sistemas Linux podem precisar das dependências nativas do Playwright). Em seguida execute integração e E2E. O runner executa cada arquivo e perfil (desktop/mobile) com servidores novos, isolando o limite real de tentativas por IP entre dispositivos simulados. Não desativa a proteção da API. Os relatórios ficam em subpastas por arquivo/perfil de test-results e playwright-report. Resultados efetivamente executados e limites da versão atual estão em docs/VALIDACAO.md; a auditoria de entrada da Parte 4 repetiu os 125 cenários anteriores com sucesso. A regressão da Parte 4 tinha 186 testes aprovados. As quantidades e os resultados atualizados da Parte 5 ficam em docs/AUDITORIA_FINAL.md.
 
 ## Usar o Modo Sessão
 
@@ -83,8 +86,16 @@ SSE usa a mesma origem/cookies, sem token na URL ou biblioteca nova. Se a conex�
 - [Informações pendentes do manual](docs/PENDENCIAS_MANUAL.md)
 - [Resultados de validação](docs/VALIDACAO.md)
 
-O proprietário criou o repositório privado [bkluis1234/site_sistema_hibridoRPG](https://github.com/bkluis1234/site_sistema_hibridoRPG). O remote `origin` foi configurado nesta cópia, na branch `main`, preservando os quatro commits anteriores. Em 31/10/2026, a leitura remota e o fetch retornaram HTTP 403; a API retornou 404 para o repositório privado. A sessão GitHub está autenticada, mas o acesso efetivo a este repositório não está disponível. **Push não realizado; divergência remota não verificável.**
+O histórico está no [repositório público GitHub](https://github.com/bkluis1234/site_sistema_hibridoRPG), branch main. Os cinco commits originais, incluindo ce85c37, foram publicados e preservados. O problema antigo de acesso foi resolvido; commits e sincronização da Parte 5 devem ser conferidos no relatório Git da entrega. Nunca use force push, envie .env/dumps/traces ou confunda commit publicado com aplicação implantada.
 
-Habilite o acesso ao novo repositório privado nas permissões da integração GitHub usada pelo Codex. Depois, execute `git fetch origin` e compare os históricos antes de `git push -u origin main`: se `origin/main` existir, `git merge-base --is-ancestor origin/main main` deve confirmar avanço direto, ou será necessário conciliar as alterações preservando ambos os históricos. Nunca use force push. Só após confirmar o envio, clone no PC e conecte a branch `main` ao Render, seguindo [o guia de publicação](docs/PUBLICACAO.md). Um commit local não se sincroniza automaticamente. Nunca envie `.env`, dumps, códigos de recuperação ou arquivos de relatório com credenciais.
+## Segurança, ajuda e produção
 
-A Parte 5 está em andamento: [auditoria inicial e pendências](docs/AUDITORIA_FINAL.md). Seus textos de referência foram preservados, sem declarar implementadas as funcionalidades solicitadas. Render e MySQL gerenciado ainda não foram provisionados.
+- [Segurança e limites](docs/SEGURANCA.md) e [divulgação responsável](SECURITY.md).
+- [Matriz RF/RNF/RN](docs/MATRIZ_RASTREABILIDADE.md).
+- Central de Ajuda em `/help`, com tutoriais opcionais e leitura persistente por conta. Manual textual em [docs/TUTORIAIS.md](docs/TUTORIAIS.md).
+- [Publicação passo a passo](docs/PUBLICACAO.md): Web Service Node no Render, frontend servido pelo Express e MySQL gerenciado externo com TLS; Aiven Free é candidato sujeito à confirmação dos limites. Modelo em render.yaml, auto deploy desativado.
+- `npm run security:secrets` verifica padrões conhecidos em arquivos/histórico; `npm run db:check` confirma conexão/TLS; `npm run audit:database` ensaia migrações, reinício e backup/restauração em MySQL local isolado; `npm run audit:load -- 300` mede 20 usuários por cinco minutos em banco de teste. `npm run audit:load:compiled -- 300` separa o backend compilado dos clientes para medir sua memória em Linux.
+
+A CI preparada executa verificações em MySQL efêmero, sem credenciais reais ou implantação. Não se presume resultado remoto sem workflow concluído. npm ci usa o lockfile; nenhuma dependência runtime foi adicionada nesta etapa. Os exemplos de ambiente contêm somente placeholders.
+
+**Ainda sem deploy público.** O proprietário precisa configurar e autorizar Render/Aiven e validar HTTPS, proxy, memória, desempenho, privilégios e backup no ambiente real. Retrato persistente, exportação de fichas e confirmação do manual completo continuam pendentes. Dados essenciais nunca dependem do disco temporário do Render; não há coleta de localização, analytics ou telemetria externa adicionada.

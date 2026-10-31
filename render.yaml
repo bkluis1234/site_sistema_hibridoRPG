@@ -1,0 +1,28 @@
+# Modelo para importação manual. Este arquivo não executa deploy nesta sessão.
+services:
+  - type: web
+    name: origem-rpg
+    runtime: node
+    plan: free
+    region: virginia
+    branch: main
+    rootDir: .
+    autoDeployTrigger: "off"
+    buildCommand: npm ci --include=dev && npm run db:generate && npm run build
+    startCommand: npm run start:render
+    healthCheckPath: /api/ready
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "1"
+      - key: DATABASE_SSL
+        value: "true"
+      - key: DATABASE_CA_PATH
+        value: /etc/secrets/mysql-ca.pem
+      - key: DATABASE_URL
+        sync: false
+      - key: APP_ORIGIN
+        sync: false
+      - key: CSRF_SECRET
+        generateValue: true

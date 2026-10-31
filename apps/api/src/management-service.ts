@@ -996,7 +996,12 @@ export async function issueAdminAuthorization(
     if (current.version !== u.version) throw conflict();
     if (recoveryCode) {
       const used = await tx.recoveryCode.updateMany({
-        where: { userId, codeHash: tokenHash(recoveryCode), usedAt: null },
+        where: {
+          userId,
+          codeHash: tokenHash(recoveryCode),
+          usedAt: null,
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+        },
         data: { usedAt: new Date() },
       });
       if (!used.count)

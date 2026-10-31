@@ -1,3 +1,4 @@
+import { formatDate } from "../locale";
 import { useState } from "react";
 import { Link, useParams, useSearchParams, useNavigate } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -100,6 +101,7 @@ export function SessionsPage() {
             </label>
             <label className="field">
               <span>Data e hora previstas (opcional)</span>
+              <small>Preencha no horário do seu dispositivo; a lista mostra o horário de Brasília.</small>
               <input
                 type="datetime-local"
                 onChange={(e) =>
@@ -140,7 +142,7 @@ export function SessionsPage() {
             <h2>{session.title}</h2>
             <p className="small muted">
               {session.scheduledAt
-                ? new Date(session.scheduledAt).toLocaleString("pt-BR")
+                ? formatDate(session.scheduledAt, "datetime")
                 : "Sem horário previsto"}
             </p>
             <div className="form-buttons">

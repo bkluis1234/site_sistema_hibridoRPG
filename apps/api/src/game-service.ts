@@ -458,10 +458,10 @@ export async function roster(tx: Tx, a: GameAccess) {
     const c = p.character;
     const accessible = Boolean(
       c &&
-        c.campaignId === a.campaign.id &&
-        (c.ownerId === a.actorId ||
-          a.gm ||
-          (a.campaign.shareSheets && c.sharingEnabled)),
+      c.campaignId === a.campaign.id &&
+      (c.ownerId === a.actorId ||
+        a.gm ||
+        (a.campaign.shareSheets && c.sharingEnabled)),
     );
     const maxima = c
       ? calculateMaxima(
@@ -512,13 +512,16 @@ export async function gameDetails(
   gm = false,
 ) {
   const a = await gameAccess(db, id, actorId, gm);
-  const p = await db.sessionParticipant.findUnique({
-    where: { gameSessionId_userId: { gameSessionId: id, userId: actorId } },
-  });
-  const host = await db.user.findUniqueOrThrow({
-    where: { id: a.session.hostId },
-    select: { username: true },
-  });
+  const [p, host, participants] = await Promise.all([
+    db.sessionParticipant.findUnique({
+      where: { gameSessionId_userId: { gameSessionId: id, userId: actorId } },
+    }),
+    db.user.findUniqueOrThrow({
+      where: { id: a.session.hostId },
+      select: { username: true },
+    }),
+    roster(db, a),
+  ]);
   return {
     session: publicSession(a.session),
     campaign: {
@@ -532,7 +535,7 @@ export async function gameDetails(
     participation: p
       ? { id: p.id, characterId: p.characterId, version: p.version }
       : null,
-    participants: await roster(db, a),
+    participants,
     transfers: {
       enabled: a.campaign.itemTransfersEnabled,
       approvalMode: a.campaign.transferApprovalMode,

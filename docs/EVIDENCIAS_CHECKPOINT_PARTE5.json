@@ -1,0 +1,17 @@
+{
+  "state": "checkpoint_incomplete",
+  "date": "2026-10-31",
+  "baseCommit": "ce85c372fe1101ae0c19ee64a299c4e189cd20d8",
+  "regression": {
+    "unit": 89,
+    "integration": 95,
+    "e2eExecutions": 20,
+    "total": 204
+  },
+  "finalLoadAfterMeasurementFix": {
+    "state": "interrupted_by_owner",
+    "exitCode": 143,
+    "hasFinalMetrics": false
+  },
+  "productionDeployed": false
+}

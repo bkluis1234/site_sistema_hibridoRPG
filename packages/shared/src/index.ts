@@ -1,4 +1,5 @@
 import { z } from "zod";
+z.config(z.locales.pt());
 export const usernameSchema = z
   .string()
   .trim()

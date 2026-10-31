@@ -14,6 +14,7 @@ import {
 } from "./management-service.js";
 import { appendGameEvent } from "./game-events.js";
 import { HttpError } from "./errors.js";
+import { StreamLimits } from "./stream-limits.js";
 const uuid = (v: unknown) => z.uuid().parse(v);
 const gmContext = (req: Request) => req.get("X-View-Context") === "gm";
 export function mountGameRoutes(
@@ -539,7 +540,7 @@ export function mountGameRoutes(
   mountStream(app, db, auth);
 }
 function mountStream(app: Express, db: PrismaClient, auth: RequestHandler) {
-  const connections = new Map<string, number>();
+  const connections = new StreamLimits();
   const activeStreams = new Set<() => void>();
   app.locals.closeGameStreams = () => {
     for (const close of [...activeStreams]) close();
@@ -561,31 +562,28 @@ function mountStream(app: Express, db: PrismaClient, auth: RequestHandler) {
       query.after ??
       (req.get("Last-Event-ID") ? uuid(req.get("Last-Event-ID")) : undefined);
     if (cursor) await g.gameEvents(db, access, { after: cursor });
-    const key = actor;
-    if ((connections.get(key) ?? 0) >= 4)
+    const release = connections.reserve(actor);
+    if (!release)
       throw new HttpError(
         429,
         "STREAM_LIMIT",
         "Limite de conexões simultâneas atingido. Feche uma aba ou use a atualização periódica.",
       );
-    connections.set(key, (connections.get(key) ?? 0) + 1);
     res.status(200).set({
       "Content-Type": "text/event-stream; charset=utf-8",
       "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
       "X-Accel-Buffering": "no",
     });
-    res.flushHeaders();
-    res.write("retry: 3000\n: conectado\n\n");
     let closed = false,
       busy = false;
     const close = () => {
       if (closed) return;
       closed = true;
       clearInterval(timer);
+      clearTimeout(lifetime);
       activeStreams.delete(close);
-      connections.set(key, Math.max(0, (connections.get(key) ?? 1) - 1));
-      if (!connections.get(key)) connections.delete(key);
+      release();
       if (!res.writableEnded) res.end();
     };
     const tick = async () => {
@@ -631,7 +629,7 @@ function mountStream(app: Express, db: PrismaClient, auth: RequestHandler) {
             return;
           }
         }
-        if (!closed) res.write(": heartbeat\n\n");
+        if (!closed && !res.write(": heartbeat\n\n")) close();
       } catch {
         close();
       } finally {
@@ -639,9 +637,15 @@ function mountStream(app: Express, db: PrismaClient, auth: RequestHandler) {
       }
     };
     const timer = setInterval(() => void tick(), 2000);
+    // Rotação normal: EventSource reconecta e recupera o estado persistido.
+    const lifetime = setTimeout(close, 30 * 60_000);
+    lifetime.unref();
     activeStreams.add(close);
     res.on("close", close);
     req.on("aborted", close);
+    res.on("error", close);
+    res.flushHeaders();
+    if (!res.write("retry: 3000\n: conectado\n\n")) return close();
     void tick();
   });
 }
