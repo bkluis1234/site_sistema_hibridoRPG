@@ -59,13 +59,13 @@ O checkpoint ad71bde52a06ca99efcb402d6478f5494cda2a82 foi conferido localmente e
 - Carga compilada com old space 192 MiB APROVADA: 20 fichas/streams, 6.000 leituras, zero erros, 400/400 sinais, sem pares ausentes; p95 REST 265,66 ms / SSE 2.024,04 ms. RSS pico do backend 318,83 MiB; heapUsed pico 110,41 MiB; heapTotal pico 192,84 MiB; externa pico 15,30 MiB. Limite total V8 informado: 384 MiB (diferente do old space).
 - Após desconexões e cinco segundos: zero streams; RSS 318,83 MiB, heapUsed 54,56 MiB e externa 8,59 MiB. Encerramento com saída 0, PID ausente, sem OOM/reinício. Não se forçou GC; RSS retido e cinco minutos de ensaio não provam ausência de vazamento nem capacidade real do Render Free.
 - Rodada antiga 399/400 continua REPROVADA; repetição 143 antiga continua INTERROMPIDA. Não reclassificadas. Nova rodada aprovada fornece evidência do estado atual, não da causa de toda a subcontagem antiga.
-- npm audit voltou a reportar zero vulnerabilidades conhecidas. Scanner próprio e revisão de arquivos/histórico continuam com limites descritos em SEGURANCA.md. CI remota ainda sem execução aprovada.
+- npm audit voltou a reportar zero vulnerabilidades conhecidas. Scanner próprio e revisão de arquivos/histórico continuam com limites descritos em SEGURANCA.md. CI remota aprovada: [execução 41211653751](https://github.com/bkluis1234/site_sistema_hibridoRPG/actions/runs/41211653751), commit 6b495eb, concluída em 31/10/2026 às 11:52:10 (America/Sao_Paulo).
 
 Métricas resumidas sem credenciais: EVIDENCIAS_PARTE5.json; método: DESEMPENHO.md; relatório: AUDITORIA_FINAL.md. Resultados antigos de 78 unitários/90 integrações e histórico das Partes 1–4 permanecem nos documentos históricos. Não somar repetições como novos testes.
 
 ## Pendências e próximos passos
 
-0. Conferir resultado efetivo da CI após push; não confundir verificações locais aprovadas com homologação em Render/Aiven. Relatório local concluído com classificação PRONTO COM RESSALVAS.
+0. CI remota foi aprovada e documentada; futuras alterações exigem nova revisão/CI. Não confundir verificações locais/remotas com homologação em Render/Aiven. Classificação: PRONTO COM RESSALVAS.
 
 1. Proprietário: confirmar aceitação das limitações/custos dos planos Free, criar MySQL Aiven e serviço Render manualmente, configurar CA/usuários/privilégios/segredos. Os comandos exatos estão em PUBLICACAO.md. Render Free foi reconferido (0,1 CPU/512 MB); páginas Aiven retornaram HTTP 403 nesta retomada, então confirmar oferta/limites no painel.
 2. Antes de jogadores reais: smoke tests HTTPS/cookies/proxy/SSE/cold start, backup e restauração no provedor, desempenho/memória no plano escolhido, responsáveis por incidentes e canal privado de segurança.
@@ -73,4 +73,8 @@ Métricas resumidas sem credenciais: EVIDENCIAS_PARTE5.json; método: DESEMPENHO
 4. Provedor de retratos não definido: seletor continua apenas prévia local. Exportação de fichas e novas versões de regras seguem previstas, sem funcionalidade fictícia.
 5. Acessibilidade completa WCAG/leitor de tela, Firefox/WebKit/aparelhos físicos e auditoria independente ainda não foram certificadas. Testes automáticos cobrem os fluxos explicitados no relatório.
 6. Definir privacidade/retenção, atendimento envolvendo menores e canal de titulares com responsável; não se declara conformidade LGPD. Rate limit compartilhado e orçamento de conexões precisam ser revistos antes de múltiplas réplicas.
-7. Habilitar divulgação privada no GitHub e revisar resultado do workflow após publicação. CI configurada não significa CI executada com sucesso.
+7. Habilitar divulgação privada no GitHub e revisar workflows futuros. A primeira execução desta retomada passou; isso não certifica infraestrutura de produção.
+
+## Encerramento desta retomada
+
+Código/testes da medição e documentação foram registrados separadamente; um ajuste de espaços na referência foi preservado em commit próprio, sem reescrever histórico. A CI aprovou 6b495eb. O registro posterior dessa aprovação é somente documental, com [skip ci] para evitar repetição sem alteração de código. O hash final publicado é conferido no Git ao encerrar. Não há suíte/servidor local ativo; MySQL hibrido-mysql-test foi parado sem remover dados/volume. Nenhum erro permanece aberto nas verificações executadas; limitações de longo prazo, recursos pendentes e infraestrutura estão listadas acima, sem garantia de ausência de outros problemas.

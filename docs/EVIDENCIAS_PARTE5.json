@@ -223,5 +223,13 @@
     "total": 206
   },
   "classification": "PRONTO COM RESSALVAS",
-  "remoteCi": "pending"
+  "remoteCi": {
+    "state": "completed",
+    "conclusion": "success",
+    "runId": 41211653751,
+    "sourceCommit": "6b495eba79623933d66a30a52a77c445c5de9a2b",
+    "url": "https://github.com/bkluis1234/site_sistema_hibridoRPG/actions/runs/41211653751",
+    "completedAt": "2026-10-31T14:52:10Z",
+    "documentationOnlyFollowup": true
+  }
 }

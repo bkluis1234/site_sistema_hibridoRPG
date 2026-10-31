@@ -20,8 +20,11 @@
 | Quatro testes do medidor corrigido | Aprovados, já incluídos nos 91 unitários |
 | `npm run security:secrets`, `git diff --check` | Aprovados antes do checkpoint; scanner por padrões, sem garantia absoluta |
 | `npm audit --json`, `npm ls --all --json` | Zero vulnerabilidades conhecidas reportadas / sem problemas de dependências na consulta desta etapa |
-| CI remota e homologação Render/Aiven | Pendentes; não declaradas aprovadas |
+| CI GitHub Actions | APROVADA: [execução 41211653751](https://github.com/bkluis1234/site_sistema_hibridoRPG/actions/runs/41211653751) no commit 6b495eba79623933d66a30a52a77c445c5de9a2b; instalação, segredos, audit, Prisma/migrações, tipos, unitários, integração, build e E2E |
+| Homologação Render/Aiven | Pendente; não declarada aprovada |
 
 Total de regressão: **206 execuções** (91 + 95 + 20), sem contar rodadas repetidas ou ensaios adicionais como casos novos. Resultados de carga são locais; não validam o limite de CPU/RAM do Render Free.
 
 O histórico da corrida/interrupção permanece em [CHECKPOINT_PARTE5.md](CHECKPOINT_PARTE5.md). Resultado atual, classificação e ressalvas em [AUDITORIA_FINAL.md](AUDITORIA_FINAL.md), método em [DESEMPENHO.md](DESEMPENHO.md) e métricas resumidas em EVIDENCIAS_PARTE5.json. Sem lint configurado; node --check dos dois arquivos JavaScript passou. Migrações: schema válido, cinco atualizadas e migrate diff sem diferenças no banco preservado. Verificação de links/matriz usa somente IDs de linhas definidas; IDs reservados em prosa não são requisitos implementados.
+
+A confirmação remota é registrada por commit posterior somente documental com [skip ci], sem mudanças de código após a execução aprovada. O teste de carga/instrumentação de memória e o ensaio Docker/TLS/backup foram locais; não são etapas deste workflow.
