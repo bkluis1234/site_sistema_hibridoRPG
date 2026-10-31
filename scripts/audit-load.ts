@@ -23,6 +23,12 @@ const db = createDb(c),
 const prefix = "load5_" + randomBytes(4).toString("hex"),
   names: string[] = [];
 const controllers: AbortController[] = [];
+const readers: Promise<void>[] = [];
+let interrupted = false;
+const interrupt = () => { interrupted = true; controllers.forEach((c) => c.abort()); };
+process.once("SIGINT", interrupt);
+process.once("SIGTERM", interrupt);
+const phase = (name: string) => { process.send?.({ kind: "audit_phase", phase: name }); };
 const samples: number[] = [];
 const measurements = new SignalMeasurements();
 let errors = 0, expectedSignals = 0;
@@ -45,6 +51,7 @@ try {
     passwordHash = await hashPassword(password);
   const actors = [];
   for (let i = 0; i < 20; i++) {
+    assert(!interrupted, "Ensaio interrompido; executar limpeza.");
     const username = prefix + "_" + i;
     names.push(username);
     const user = await db.user.create({
@@ -113,7 +120,7 @@ try {
       signal: controller.signal,
     });
     assert.equal(response.status, 200);
-    void (async () => {
+    readers.push((async () => {
       const reader = response.body!.getReader(),
         decoder = new TextDecoder();
       let pending = "";
@@ -133,10 +140,12 @@ try {
       } catch {
         if (!controller.signal.aborted) errors++;
       }
-    })();
+    })());
   }
+  phase("connected");
   const started = performance.now();
   for (let round = 0; round < seconds; round++) {
+    assert(!interrupted, "Ensaio interrompido; executar limpeza.");
     peakMemory = Math.max(peakMemory, memory());
     const tick = performance.now();
     await Promise.all(
@@ -159,13 +168,14 @@ try {
         where: { gameSessionId: id, type: "NARRATIVE_RECORDED" },
         orderBy: { sequence: "desc" },
       });
-      measurements.publish(stored.id, before);
+      measurements.publish(stored.id, before, actors.map((a) => a.user.id));
       expectedSignals += actors.length;
     }
     const wait = Math.max(0, 1000 - (performance.now() - tick));
     await new Promise((resolve) => setTimeout(resolve, wait));
   }
   await new Promise((resolve) => setTimeout(resolve, 2500));
+  assert(!interrupted, "Ensaio interrompido; executar limpeza.");
   const percentile = (values: number[], p: number) =>
     [...values].sort((a, b) => a - b)[Math.ceil(values.length * p) - 1] ?? null;
   const report = {
@@ -179,6 +189,7 @@ try {
     sseP95Ms: percentile(measurements.latencies, 0.95),
     delivered: measurements.latencies.length,
     expectedSignals,
+    missingDeliveries: measurements.missingDeliveries,
     rssDeltaMiB: Math.round(
       (memory() - startMemory) / 1048576,
     ),
@@ -189,14 +200,19 @@ try {
   console.log(JSON.stringify(report));
   assert.equal(errors, 0);
   assert.equal(measurements.latencies.length, expectedSignals);
+  assert.equal(measurements.missingDeliveries.length, 0);
   assert(report.restP95Ms !== null && report.restP95Ms < 500);
   assert(report.sseP95Ms !== null && report.sseP95Ms < 5000);
 } finally {
   clearInterval(sampler);
   controllers.forEach((c) => c.abort());
+  await Promise.allSettled(readers);
+  phase("clients_disconnected");
   app.locals.closeGameStreams?.();
   server.closeAllConnections();
   await new Promise<void>((resolve) => server.close(() => resolve()));
   await cleanupUsers(db, names);
   await db.$disconnect();
+  process.removeListener("SIGINT", interrupt);
+  process.removeListener("SIGTERM", interrupt);
 }
