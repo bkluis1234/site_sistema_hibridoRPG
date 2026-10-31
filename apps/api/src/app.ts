@@ -5,7 +5,7 @@ import express, {
 } from "express";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
-import { rateLimit } from "express-rate-limit";
+import { rateLimit, ipKeyGenerator } from "express-rate-limit";
 import { randomUUID } from "node:crypto";
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { z } from "zod";
@@ -30,6 +30,7 @@ import {
 
 import { HttpError } from "./errors.js";
 import { initializeSheet } from "./sheet-service.js";
+import { mountGameRoutes } from "./game-routes.js";
 import { mountSheetRoutes } from "./sheet-routes.js";
 import { mountManagementRoutes } from "./management-routes.js";
 const unauthorized = () =>
@@ -84,10 +85,27 @@ export function createApp(db: PrismaClient, c: Config) {
   });
   app.use(express.json({ limit: "128kb" }));
   app.use(cookieParser());
-  const limit = (max: number, windowMs: number) =>
+  const gameRequest = (req: Request) =>
+    /^\/api\/sessions(?:\/|$)/.test(
+      req.originalUrl.split("?")[0] ?? req.path,
+    ) ||
+    /^\/api\/campaigns\/[^/]+\/sessions$/.test(
+      req.originalUrl.split("?")[0] ?? req.path,
+    );
+  const limit = (max: number, windowMs: number, perActor = false) =>
     rateLimit({
       windowMs,
-      limit: max,
+      limit: (req, res) =>
+        perActor && res.locals.rateLimitUserId && gameRequest(req) ? 2400 : max,
+      ...(perActor
+        ? {
+            keyGenerator: (req: Request, res: Response) =>
+              res.locals.rateLimitUserId
+                ? (gameRequest(req) ? "game:" : "api:") +
+                  res.locals.rateLimitUserId
+                : ipKeyGenerator(req.ip ?? "127.0.0.1"),
+          }
+        : {}),
       standardHeaders: "draft-8",
       legacyHeaders: false,
       message: {
@@ -97,8 +115,35 @@ export function createApp(db: PrismaClient, c: Config) {
         },
       },
     });
-  app.use("/api", limit(600, 15 * 60_000));
-  app.use("/api/auth", limit(40, 15 * 60_000));
+  // Borda por IP e limite autenticado: um grupo atrás do mesmo Wi-Fi não divide a cota de uma conta.
+  app.use("/api", limit(12000, 15 * 60_000));
+  app.use("/api", async (req, res, next) => {
+    const token = req.cookies[sessionCookie];
+    if (typeof token === "string" && token.length <= 100) {
+      const session = await db.session.findUnique({
+        where: { tokenHash: tokenHash(token) },
+        include: { user: true },
+      });
+      if (
+        session &&
+        session.expiresAt > new Date() &&
+        session.idleExpiresAt > new Date() &&
+        !session.user.disabledAt
+      ) {
+        res.locals.authSession = session;
+        res.locals.rateLimitUserId = session.userId;
+      }
+    }
+    next();
+  });
+  app.use("/api", limit(600, 15 * 60_000, true));
+  const credentialLimit = limit(40, 15 * 60_000);
+  app.use("/api/auth", (req, res, next) =>
+    req.method === "POST" &&
+    ["/register", "/login", "/recover"].includes(req.path)
+      ? credentialLimit(req, res, next)
+      : next(),
+  );
   // Uma segunda chave reduz tentativas distribuídas contra o mesmo login; somente hash na memória.
   const accountLimit = rateLimit({
     windowMs: 15 * 60_000,
@@ -178,10 +223,14 @@ export function createApp(db: PrismaClient, c: Config) {
   const auth = async (req: Request, res: Response, next: NextFunction) => {
     const token = req.cookies[sessionCookie];
     if (typeof token !== "string" || token.length > 100) throw unauthorized();
-    const session = await db.session.findUnique({
-      where: { tokenHash: tokenHash(token) },
-      include: { user: true },
-    });
+    const session =
+      (res.locals.authSession as
+        | Prisma.SessionGetPayload<{ include: { user: true } }>
+        | undefined) ??
+      (await db.session.findUnique({
+        where: { tokenHash: tokenHash(token) },
+        include: { user: true },
+      }));
     if (
       !session ||
       session.expiresAt <= new Date() ||
@@ -457,6 +506,7 @@ export function createApp(db: PrismaClient, c: Config) {
     });
     res.json({ character });
   });
+  mountGameRoutes(app, db, auth);
   mountManagementRoutes(app, db, auth, admin);
   mountSheetRoutes(app, db, auth, c.PORTRAIT_MAX_BYTES);
   app.use("/api", (_req, _res, next) =>

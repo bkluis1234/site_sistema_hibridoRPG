@@ -79,3 +79,12 @@ Reentrada em crítico, efeitos de dano após estabilização, protocolos de cura
 ## Limites técnicos de entrada
 
 Nome 80 caracteres, profissão 160, histórico 12.000, demais narrativas 4.000 (conceito 2.000). Idade 0..200, altura 0,10..4,00 m, peso 0,10..1.500,00 kg; altura/peso com duas casas. Esses limites são validações de formulário, não atributos ou restrições de raça/classe. Campos opcionais vazios permanecem nulos. Retrato tem prévia local PNG/JPEG/WebP, limite configurável; armazenamento externo ainda não conectado.
+
+
+## Integração de sessão (Parte 4)
+
+O Modo Sessão reutiliza as fórmulas e serviços desta documentação; não cria regras de combate, dano de armas, consumo automático ou cura presumida. Motor único de aleatoriedade em dice-engine.ts para ficha/sala/repetição. Rolagem de perícia persiste base, fadiga, modificador contextual autorizado, alvo final e resultado; 20 natural falha e limite superior continua 19.
+
+Política de fadiga usa a configuração persistida da campanha. GM pode justificar aplicação contextual e modificador no alvo; jogador não pode se autorizar. BONUS 1 PE +2 e RETRY 2 PE mantêm exclusão mútua, autorização real GM e transação, conforme ROLAGENS.md. Presença online não é mecânica de RPG nem presença física. Eventos são registros confirmados, não inferências narrativas.
+
+Transferências seguem somente o fluxo operacional explicitado na Parte 4 (quantidade, aceite, capacidade) e ficam desativadas por padrão até aprovação do GM da campanha. Não foram habilitadas campanhas reais nem presumidas regras adicionais de comércio, peso ou consumo. Manual completo e homologação de Marcus continuam pendentes.

@@ -193,7 +193,7 @@ export function mountSheetRoutes(
     const characterId = id(req.params.id);
     await service.authorized(db, characterId, res.locals.user.id);
     const rolls = await db.diceRoll.findMany({
-      where: { characterId },
+      where: { characterId, gameSessionId: null },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 50,
       select: {

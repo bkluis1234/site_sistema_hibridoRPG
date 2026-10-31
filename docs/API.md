@@ -1,4 +1,4 @@
-# API REST v0.3
+# API REST v0.4
 
 Base `/api`. JSON; campos desconhecidos são recusados. Sessão por cookie; nunca bearer em localStorage. Mutações exigem `Origin: APP_ORIGIN` e `X-CSRF-Token`, obtido por GET `/auth/csrf` na mesma sessão de cookies. Erros: `{error:{code,message,fields?,requestId?}}`. Sem detalhes SQL ou credenciais.
 
@@ -113,3 +113,53 @@ Todas as rotas /admin exigem ADMIN ativo. GET não devolve hashes/sessões/códi
 | PATCH /admin/settings | version, registrationOpen, campaignCreationEnabled, reason + autorização |
 
 Convites privilegiados preservam as rotas anteriores e respostas 201/204. Não há criação pública de ADMIN, exclusão física nem endpoint de upload. Gestão usa limites de listagem; pesquisa por usuário e cursor de histórico estão disponíveis, paginação completa permanece futura. Contratos completos: packages/shared/src/campaigns.ts.
+
+## Modo Sessão — Parte 4
+
+As rotas abaixo exigem sessão de autenticação válida e membro ACTIVE na campanha. ADMIN não é bypass. Contexto de mestre: X-View-Context: gm nas rotas REST; query context=gm no SSE, sempre conferindo função GM. Mutações exigem Origin/CSRF, operationId UUID, versão conforme domínio e autorização revalidada antes de replay idempotente. O contexto da URL não concede papel.
+
+| Método/rota | Contrato resumido |
+|---|---|
+| GET /campaigns/:campaignId/sessions | Últimas 100 sessões, metadados públicos e isGM do vínculo |
+| POST /campaigns/:campaignId/sessions | GM; title, scheduledAt ISO/null, privateRollsToGM; 201 com session SCHEDULED |
+| GET /sessions/:sessionId | Metadados, GM/contexto, participação própria, elenco/presença e projeções de recursos autorizadas; sem snapshot bruto |
+| POST /sessions/:id/start | GM; version da sessão, reason público; SCHEDULED→ACTIVE |
+| POST /sessions/:id/pause | GM; version, reason; ACTIVE→PAUSED |
+| POST /sessions/:id/resume | GM; version, reason; PAUSED→ACTIVE |
+| POST /sessions/:id/finish | GM; version, reason; ACTIVE/PAUSED→FINISHED com retrato final |
+| POST /sessions/:id/cancel | GM; version, reason; SCHEDULED→CANCELLED |
+| POST /sessions/:id/join | ACTIVE; characterId próprio/vinculado; GM pode enviar null |
+| POST /sessions/:id/heartbeat | clientId UUID e away boolean; não recebe operationId; exige participante; data do servidor |
+| GET /sessions/:id/characters | Fichas próprias vinculadas ou elenco operacional do GM em contexto explícito |
+| GET /sessions/:id/characters/:characterId/sheet | Dono/GM autorizado; SheetDetails da ficha vinculada, com campos privados filtrados |
+| GET /sessions/:id/events?before=UUID&category=... | Até 50 eventos visíveis desc; nextBefore, nextAfter; category MECHANICAL/NARRATIVE/ADMINISTRATIVE |
+| GET /sessions/:id/events?after=UUID | Até 50 eventos visíveis após cursor, asc; before e after são mutuamente exclusivos |
+| POST /sessions/:id/events | title, body, visibility PUBLIC/PRIVATE/GM_ONLY; cria evento narrativo, não mecânico arbitrário |
+| GET /sessions/:id/rolls?filter=ALL&before=UUID | Até 50 rolagens visíveis, nextBefore; filtros ALL/MINE/SKILL/DAMAGE/GM |
+| POST /sessions/:id/rolls | ACTIVE; characterId ou null GM, expression OU skillKey, visibility PUBLIC/PRIVATE/GM_ONLY/GM_SHARED, category GENERAL/DAMAGE; contextModifier/fatigueOverride/modifierReason só GM autorizado |
+| POST /sessions/:id/rolls/:rollId/effort | version de rolagem, action ACCEPT/BONUS/REQUEST_RETRY/RETRY; somente autor; regra PE reutilizada |
+| POST /sessions/:id/rolls/:rollId/authorize-retry | GM explícito; version, category ESCAPE/RESISTANCE, reason |
+| PATCH /sessions/:id/resources | characterId + contrato de recurso da ficha; version do recurso; anterior calculado no servidor |
+| PATCH /sessions/:id/conditions | characterId + version da condição + fatigue/bleeding |
+| PATCH /sessions/:id/critical | characterId + version + action da ficha |
+| POST /sessions/:id/injuries | characterId + contrato de criação de ferimento |
+| PATCH /sessions/:id/injuries/:injuryId | characterId + contrato/versão de ferimento |
+| POST /sessions/:id/inventory | characterId + contrato de criação de item |
+| PATCH /sessions/:id/inventory/:itemId | characterId + contrato completo/versão de item |
+| DELETE /sessions/:id/inventory/:itemId | characterId, version do item |
+| POST /sessions/:id/inventory/:itemId/use | characterId, version do item, quantity positiva, kind USE/DISCARD; reduz somente quantidade informada |
+| GET /sessions/:id/notes | Até 200 notas autorizadas; sem total oculto |
+| POST /sessions/:id/notes | title, body, visibility; PRIVATE só autor, GM_ONLY só GM explícito |
+| PATCH /sessions/:id/notes/:noteId | title, body, visibility imutável e version da nota |
+| DELETE /sessions/:id/notes/:noteId | version da nota; respeita autoria e classe |
+| GET /sessions/:id/summary | Somente FINISHED; retrato/contagens/rolagens/notas autorizados, limites explícitos |
+| PATCH /sessions/:id/summary | GM; version da sessão e narrativeSummary público escrito manualmente |
+| GET /sessions/:id/stream?context=player&after=UUID | text/event-stream, cookie HttpOnly, Last-Event-ID aceito; payload change {eventId,type} já autorizado |
+| PATCH /sessions/:id/transfer-settings | GM; version da campanha, enabled, approvalMode RECIPIENT/RECIPIENT_OR_GM, reason |
+| GET /sessions/:id/transfers | Até 100 propostas visíveis a remetente/destinatário/GM; enabled da configuração |
+| POST /sessions/:id/transfers | Opt-in da campanha; itemId, destinationCharacterId, quantity, version do item; não movimenta ainda |
+| POST /sessions/:id/transfers/:transferId/review | Destinatário ou GM quando configurado; version da proposta, decision APPROVE/REJECT, reason |
+
+Mecânicas exigem sessão ACTIVE e ficha presente/autorizada. Diário/acontecimentos são editáveis enquanto a sessão está aberta; encerramento conserva consulta, com exceção da narrativa manual do resumo pelo GM. Histórico/paginação filtra antes de limitar; cursores secretos retornam 409 CURSOR_INVALID. Nenhuma resposta pública inclui eventSequence ou snapshot integral. Rotas legadas de rolagem excluem registros de sessão; rotas legadas de decisão recusam sessionId incompatível.
+
+Retentativa com o mesmo UUID não reaplica efeito. Mesmo UUID com conteúdo/rota diferentes gera 409. A criação de uma nova rolagem pode fechar a decisão anterior da mesma ficha; consultar a versão atual antes de gastar PE. Contratos completos em packages/shared/src/game.ts; detalhes e limites em MODO_SESSAO.md, ROLAGENS.md e SINCRONIZACAO.md.

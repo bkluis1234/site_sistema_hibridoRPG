@@ -34,3 +34,12 @@ Acesso direto à infraestrutura, backups ou credenciais SQL pode revelar dados; 
 Campanhas arquivadas são consultáveis por membros autorizados e bloqueiam gestão/edição GM. O proprietário conserva a própria ficha. Reativação da campanha é administrativa e auditada. Conta desativada perde sessões e acesso; remover membro desfaz vínculos de fichas sem apagar os dados.
 
 Evidências: tests/integration/campaigns.test.ts (isolamento, segredos, mudança de campanha, concorrência e administração), testes anteriores de autorização e tests/e2e/management.spec.ts. Resultados executados em VALIDACAO.md.
+
+
+## Sessões de jogo (Parte 4)
+
+Sala exige vínculo ACTIVE na campanha, independentemente do papel global. GM controla o ciclo de vida; GM_ONLY e segredos requerem contexto explícito. Jogador realiza mecânicas com ficha própria presente; GM corrige fichas vinculadas. Remoção/desativação/logout revogam REST e fecham SSE no ciclo de revalidação. Nenhum token de autenticação é colocado na URL de stream.
+
+Rolagem PRIVATE pode ser consultada pelo mestre quando permitido na criação da sessão; nota PRIVATE continua exclusiva do autor. Solicitar repetição compartilha explicitamente o teste com GM para análise. PUBLIC/GM_SHARED são compartilhados com membros aceitos; GM_ONLY apenas mestres autorizados no contexto próprio. Filtrar antes de paginação/contagem; sem sequência numérica pública ou totais ocultos. Rotas legadas não expõem rolagens da sala nem snapshots dos resultados secretos.
+
+Operações e consentimento de transferência, escopo do diário/resumo e limites de cache/infraestrutura estão em MODO_SESSAO.md e ROLAGENS.md. Acesso anterior legitimamente recebido pode ter sido guardado pelo usuário; revogação não apaga cópias já vistas ou backups de infraestrutura.

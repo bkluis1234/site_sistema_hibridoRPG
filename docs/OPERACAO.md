@@ -34,3 +34,9 @@ O comando invalida sessões e códigos anteriores e emite um novo código de uso
 Sessões expiradas não autenticam, mas a remoção periódica física ainda deve ser agendada com política de retenção; convites/logs são mantidos para auditoria. Monitorar crescimento e capacidade do banco. Logs HTTP registram somente categoria e requestId; não habilitar body/cookie debug em produção. Traces de Playwright contêm credenciais sintéticas e ficam ignorados no Git.
 
 Antes de migração: backup verificado, revisão do SQL e staging. Se uma migração falhar, investigar e seguir o procedimento de reparo do Prisma; não resetar banco de produção nem marcar migração aplicada sem executar/conferir o SQL correspondente.
+
+## Sessões e compatibilidade da Parte 4
+
+O backup completo agora inclui as 33 tabelas, também rolagens/eventos/notas/presença e transferências; conteúdo narrativo privado exige a mesma proteção dos demais dados. Testar restauração consistente em staging antes de produção; nenhuma restauração de produção foi executada aqui.
+
+Depois de criar rolagens de sessão com visibilidade reservada, não executar a API 0.3 contra esse banco: consultas legadas daquela versão ainda não conhecem o filtro de sala. Uma reversão precisa de estratégia compatível de aplicação/dados; não basta trocar o código e manter novos dados secretos acessíveis a consultas antigas. Na publicação, encerrar instâncias antigas e conferir a versão nova antes de liberar o grupo no Modo Sessão. Ensaiar esse procedimento na Parte 5, sem excluir histórico para contornar o problema.

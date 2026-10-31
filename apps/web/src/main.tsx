@@ -1,5 +1,7 @@
 import {
   StrictMode,
+  lazy,
+  Suspense,
   createContext,
   useContext,
   useState,
@@ -87,6 +89,12 @@ import { GMCharacterEditor } from "./management/GMCharacterEditor";
 import { AdminDashboard } from "./management/AdminDashboard";
 import { NotificationsBell } from "./management/Notifications";
 import "./management/management.css";
+const SessionsPage = lazy(() =>
+  import("./game/SessionsPage").then((m) => ({ default: m.SessionsPage })),
+);
+const SessionRoom = lazy(() =>
+  import("./game/SessionRoom").then((m) => ({ default: m.SessionRoom })),
+);
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { retry: false, refetchOnWindowFocus: true },
@@ -936,7 +944,7 @@ function Profile() {
             <dt>Criação de campanhas</dt>
             <dd>
               {me.data?.user.canCreateCampaigns
-                ? "Permissão concedida · módulo na etapa 3"
+                ? "Permissão concedida"
                 : "Não habilitada"}
             </dd>
           </div>
@@ -971,6 +979,22 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="characters/:id" element={<CharacterSheet />} />
           <Route path="campaigns" element={<CampaignsPage />} />
+          <Route
+            path="campaigns/:campaignId/sessions"
+            element={
+              <Suspense fallback={<p role="status">Carregando sessões…</p>}>
+                <SessionsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="campaigns/:campaignId/sessions/:sessionId"
+            element={
+              <Suspense fallback={<p role="status">Carregando sala…</p>}>
+                <SessionRoom />
+              </Suspense>
+            }
+          />
           <Route path="campaigns/:id" element={<CampaignDashboard />} />
           <Route path="campaigns/:id/gm" element={<CampaignDashboard />} />
           <Route

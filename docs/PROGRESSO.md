@@ -1,6 +1,6 @@
 # Progresso — Sistema Híbrido 2.6
 
-Atualizado em 30/10/2026. Versão da aplicação: 0.3.0. Fundação/ficha auditadas antes da Parte 3; gestão multiusuário integrada. Referências: imagem oficial e texto explícito da Parte 2; Manual completo ainda pendente. Sem publicação em produção ou repositório remoto configurado.
+Atualizado em 31/10/2026 UTC. Versão da aplicação: 0.4.0. Partes 1/2/3 auditadas antes de implementar o Modo Sessão. Referências: imagem oficial e texto explícito da Parte 2; Manual completo ainda pendente. Sem publicação em produção ou repositório remoto configurado.
 
 ## Arquitetura adotada
 
@@ -33,11 +33,13 @@ Ficha usa versões independentes para identificação, atributos, treinamentos e
 - 202610310003_campaign_management: aplicada ao MySQL de teste existente, preservando dados. Acrescenta estados, convites limitados, notas com escopo, privacidade, solicitações, auditoria, notificações, provas administrativas e configurações. CHECK/FK de notas corrigido e migração local recuperada sem reset; detalhes em VALIDACAO.md. Status atualizado e diff sem diferenças.
 - As três migrações SQL passaram desde vazio em instância MySQL isolada (27 tabelas), sem tocar no datadir principal. Ensaio não executa ledger Prisma.
 
+- 202610310004_game_sessions: aplicada com sucesso ao MySQL de teste existente, sem reset. GameSession, SessionParticipant, SessionEvent, SessionNote, PresenceRecord e ItemTransfer; DiceRoll ampliado, sem segundo motor. Slot único vivo/CHECKs/índices e transferências desativadas por padrão. Nenhum histórico anterior publicado automaticamente.
+
 Nenhuma migração executada em produção. Ensaiar prisma migrate deploy em staging vazio e restauração antes de publicar.
 
 ## Dependências e comandos
 
-Não foram acrescentadas dependências runtime nas Partes 2/3. Mantidas versões do lockfile: Node 24, React 19.3.1, Vite 8.3.5, TypeScript 5.9.3, Express 5.3.0, Prisma 7.10.1, Zod 4.6.7, Tailwind 4.3.3, Vitest 4.1.12, Supertest 7.3.1, Playwright 1.64.1 e demais bibliotecas aprovadas. Formatação realizada por Prettier temporário, sem dependência nova no projeto.
+Não foram acrescentadas dependências runtime nas Partes 2/3/4; SSE usa Express/EventSource nativos. Mantidas versões do lockfile: Node 24, React 19.3.1, Vite 8.3.5, TypeScript 5.9.3, Express 5.3.0, Prisma 7.10.1, Zod 4.6.7, Tailwind 4.3.3, Vitest 4.1.12, Supertest 7.3.1, Playwright 1.64.1 e demais bibliotecas aprovadas. Formatação realizada por Prettier temporário, sem dependência nova no projeto.
 
 ```sh
 npm ci
@@ -53,7 +55,7 @@ Neste cloud, o Chromium headless está em /workspace/.cache/ms-playwright; foi u
 
 ## Validação
 
-Regressão final: 51 unitários, 60 integrações MySQL e 14 E2E desktop/mobile aprovados (125 casos). TypeScript, build, schema Prisma, três migrações/status e diff passaram. Auditoria contínua comprovou persistência após reiniciar MySQL e API antes da Parte 3. SQL de instalação vazia aprovado separadamente. Falhas intermediárias/correções e limites em VALIDACAO.md; evidências prévias em AUDITORIA_PARTES_1_2.md.
+Entrada da Parte 4: 51 unitários, 60 integrações MySQL e 14 E2E desktop/mobile aprovados (125 casos), antes do código novo. TypeScript, build, schema Prisma, três migrações/status e diff passaram. Auditoria contínua comprovou persistência após reiniciar MySQL e API antes da Parte 3. SQL de instalação vazia aprovado separadamente. Falhas intermediárias/correções e limites em VALIDACAO.md; evidências prévias em AUDITORIA_PARTES_1_2.md.
 
 ## Funcionalidades acrescentadas na Parte 3
 
@@ -69,19 +71,19 @@ Regressão final: 51 unitários, 60 integrações MySQL e 14 E2E desktop/mobile 
 ## Pendências e limitações
 
 1. Storage externo persistente de retrato: UI é prévia local; não salva imagem no banco ou no disco temporário do Render. Configurar provedor e validação real de imagem no backend antes de habilitar upload.
-2. Conferir os fluxos com Marcus e o grupo real após configurar a infraestrutura; as contas de teste não criam contas reais. Aprovação/painéis/compartilhamento estão implementados. Transferências de itens continuam futuras.
+2. Conferir os fluxos com Marcus/grupo real após configurar a infraestrutura. Aprovação/painéis/compartilhamento e Modo Sessão estão integrados. Transferências são optativas, desativadas por padrão até aprovação explícita na campanha.
 3. Conferir manual completo e exemplos com Marcus, especialmente fadiga proposta, dano de armas, exceções, reentrada em crítico, deslocamento e recuperação incompleta de PE.
 4. Repositório privado remoto ainda não criado. O proprietário informou que não existe URL; o commit/bundle local não se sincroniza automaticamente com o PC.
 5. Produção: Render, MySQL gerenciado, TLS real, backups/restauração, monitoramento, carga e política de retenção/anonimização não provisionados/verificados.
-6. Sem fila offline persistente, push em tempo real ou merge automático de texto. Fechar/recarregar ignorando o aviso pode perder rascunho ainda não confirmado; o MySQL continua fonte oficial.
+6. SSE/fallback em sala; sem fila offline persistente ou merge automático de texto. Fechar/recarregar ignorando o aviso pode perder rascunho ainda não confirmado; o MySQL continua fonte oficial.
 7. Rate limit permanece em memória por processo: store compartilhado antes de escala horizontal. Rotina agendada de limpeza de sessões/operações e política de retenção precisam ser definidas.
-8. Listagens de fichas/rolagens/convites ainda têm limites; histórico já tem cursor. Histórico com narrativas muito longas e chunk JS ~555,42 kB (~163,58 kB gzip) pedem medição/otimização em staging. O build avisou sobre chunk >500 kB; não é falha de compilação nem prova de meta de latência.
+8. Listagens de fichas/rolagens/convites ainda têm limites; histórico já tem cursor. Histórico com narrativas muito longas e chunk JS ~560,09 kB (~165,21 kB gzip) pedem medição/otimização em staging. O build avisou sobre chunk >500 kB; não é falha de compilação nem prova de meta de latência.
 9. Navegadores físicos, Firefox/WebKit, leitor de tela, auditoria WCAG/contraste completa e testes de carga permanecem pendentes.
-10. Exportação, transferências e modo sessão avançado seguem em entregas posteriores.
+10. Exportação, retenção/limpeza agendada e ferramentas avançadas futuras seguem pendentes; sem combate tático ou consumo automático.
 
 ## Continuidade Git
 
-Histórico da Parte 1 preservado e histórico da Parte 2 preservado; novas alterações registradas em commit da Parte 3. Pacote sistema-hibrido-parte3.zip inclui código versionado, histórico completo em historico.git.bundle e instruções CONTINUAR_NO_PC.md; não inclui .env, node_modules, dados MySQL, credenciais ou traces. O commit exato consta em ENTREGA.json no pacote.
+Histórico das Partes 1/2/3 preservado; novas alterações registradas em commit da Parte 4. Pacote sistema-hibrido-parte4.zip inclui código versionado, histórico completo em historico.git.bundle e instruções CONTINUAR_NO_PC.md; não inclui .env, node_modules, dados MySQL, credenciais ou traces. O commit exato consta em ENTREGA.json no pacote.
 
 Extraia o ZIP e execute `git clone historico.git.bundle sistema-hibrido` para recuperar o histórico. Depois de criar remoto privado, `git remote set-url origin <URL>` e `git push -u origin main`. No outro dispositivo, clone esse remoto. O repositório remoto, quando criado, será a referência de continuidade.
 
@@ -92,4 +94,26 @@ Extraia o ZIP e execute `git clone historico.git.bundle sistema-hibrido` para re
 2. Instalar com npm ci; configurar MySQL próprio e segredos pelo .env.example, gerar Prisma e aplicar três migrações com db:deploy. Não copiar o banco/credenciais de teste deste cloud.
 3. Criar primeiro ADMIN por CLI; habilitar Marcus por convite ou conta existente; ele cria campanha e convida o grupo conforme CAMPANHAS.md.
 4. Homologar manual e proposta de fadiga; configurar storage persistente se desejar imagens; ensaiar instalação Prisma limpa, backup/restauração, TLS/Render e carga antes de produção.
-5. Planejar Parte 4: modo sessão, exportação, histórico avançado e refinamentos; depois monitoramento e revisão de segurança/acessibilidade em produção.
+5. Planejar Parte 5: homologação integral, publicação, backups/restauração, monitoramento, desempenho/segurança/acessibilidade; exportação e ferramentas adicionais dependem do escopo aprovado.
+
+
+## Funcionalidades acrescentadas na Parte 4
+
+- Auditoria obrigatória das Partes 1/2/3, com 125 cenários anteriores repetidos antes de implementar.
+- Sessões de jogo por campanha: agendar, iniciar, pausar, retomar, encerrar/cancelar, uma viva por campanha; membro entra com ficha própria e GM pode acompanhar sem personagem.
+- Sala responsiva com três painéis no desktop, cinco abas no celular, barra de recursos, controles de sobrevivência/inventário/crítico e ferramentas GM.
+- Rolagens oficiais do mesmo motor, PUBLIC/PRIVATE/GM_ONLY/GM_SHARED, filtros/cursores opacos, alvos/fadiga/contexto e PE transacional/idempotente. Sem vazamento por histórico/endpoints legados.
+- Eventos mecânicos persistidos na transação, inclusive alterações pelas rotas anteriores de ficha; projeções sem notas privadas; eventos narrativos explícitos e categorias distintas.
+- Diário com autoria/versão/visibilidade imutável, notas GM em contexto explícito; resumo de registros reais após encerramento e narrativa manual publicada pelo GM.
+- SSE filtrado por usuário/contexto, reconexão, refetch/deduplicação e polling alternativo. Validação periódica fecha streams revogados; encerramento do servidor fecha streams antes do shutdown.
+- Presença aproximada por heartbeat, expiração e agregação de abas. Avisos discretos silenciáveis, sem áudio/push obrigatório.
+- Transferência optativa: configuração GM auditada, proposta/aceite, mesma campanha, quantidade/capacidade/versão revalidadas e movimentação atômica; sem copiar notas privadas. Default false preservado em campanhas reais.
+- Limites por conta autenticada e borda IP; consultas /me não usam a cota de tentativas de senha. Proteção de credenciais preservada. Mutações da sala falham imediatamente offline, sem envio automático de ações pendentes ao reconectar.
+- Rotas novas carregadas sob demanda; sem dependências novas. Documentos MODO_SESSAO, ROLAGENS, SINCRONIZACAO e AUDITORIA_PARTE_4.
+
+Resultados finais da ampliação, falhas encontradas e limites ficam em VALIDACAO.md. Nenhuma configuração de produção, credencial real ou remoto Git foi criada automaticamente.
+
+
+## Fechamento da Parte 4
+
+Regressão final completa: **186 cenários aprovados** — 78 unitários, 90 integrações MySQL e 18 E2E (9 desktop/9 celular). TypeScript/build, Prisma validate/status/diff e ensaio dos quatro SQLs desde vazio passaram (33 tabelas). O problema de snapshot obsoleto introduzido na ordenação de locks foi corrigido com READ COMMITTED, mantendo todos os testes anteriores. Nenhum teste crítico local ficou pendente. Resultados/falhas intermediárias e limites externos em VALIDACAO.md.

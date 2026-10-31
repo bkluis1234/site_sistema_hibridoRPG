@@ -1,6 +1,6 @@
 # Requisitos — Sistema Híbrido 2.6
 
-Escopo: fundação, ficha interativa e gestão multiusuário da Parte 3. P0 = essencial à base; P1 = próxima funcionalidade; P2 = expansão. Uma entidade modelada não significa funcionalidade concluída. Resultados efetivamente executados ficam em VALIDACAO.md. Testes indicados como planejados ainda não existem.
+Escopo: fundação, ficha interativa, campanhas e Modo Sessão da Parte 4. P0 = essencial à base; P1 = próxima funcionalidade; P2 = expansão. Uma entidade modelada não significa funcionalidade concluída. Resultados efetivamente executados ficam em VALIDACAO.md. Testes indicados como planejados ainda não existem.
 
 ## Funcionais
 
@@ -27,9 +27,9 @@ Escopo: fundação, ficha interativa e gestão multiusuário da Parte 3. P0 = es
 | RF-019 | Aprovação de mudanças mecânicas | P1 | Solicitação guarda versão mecânica; GM aprova em transação ou rejeita comentando; obsoleto retorna 409. | campaigns.test.ts: aprovação simultânea/obsoleta/rejeição; E2E management | Implementado para atributos/treinamentos |
 | RF-020 | Painel administrativo | P1 | ADMIN pesquisa/desativa/reativa contas, administra papéis/estados/configurações, convites e logs. Promoção exige senha+código único. | campaigns.test.ts: administração/provas/sessões; E2E management | Implementado; exclusão física não exposta |
 | RF-021 | Uso em dispositivos móveis | P0 | Login/cadastro/ficha/dashboard operáveis por toque a partir de 360 px sem rolagem horizontal da página. | E2E em Pixel 7 e desktop; revisão visual e teclado | Verificado em Chromium desktop/Pixel 7; aparelhos físicos pendentes |
-| RF-022 | Sincronização entre dispositivos | P0 | Leitura de novo dispositivo obtém estado MySQL; edição concorrente recebe 409. | Integração: persistência e concorrência | Implementado por consulta/refetch, sem atualização push |
+| RF-022 | Sincronização entre dispositivos | P0 | Leitura de novo dispositivo obtém estado MySQL; edição concorrente recebe 409. | Integração: persistência e concorrência | Consulta/refetch em geral; SSE/fallback nas salas de jogo |
 | RF-023 | Indicação do salvamento | P0 | Distinguir dados carregados, alterações locais, salvando, persistido, falha e conflito. | E2E: salvamento e falha de rede; conflito visual testado em desktop/mobile | Implementado: autosave, operações imediatas e recuperação de conflito |
-| RF-024 | Exportação de fichas | P2 | Exportar somente campos autorizados e preservar versão das regras. | Planejado: snapshot de exportação e autorização | Etapa 4 |
+| RF-024 | Exportação de fichas | P2 | Exportar somente campos autorizados e preservar versão das regras. | Planejado: snapshot de exportação e autorização | Fora do escopo atual de Modo Sessão; entrega futura |
 | RF-025 | Evolução das regras | P0 | Separar regras e contratos, registrar rulesVersion em cada ficha; migração explícita sem reinterpretar fichas antigas. | Unitário: manual ausente; futuros testes por versão e migração | Regras 2.6 compartilhadas; snapshots de rolagens preservados; manual completo pendente |
 
 ## Não funcionais
@@ -131,3 +131,67 @@ Evidências atuais e limites de execução ficam em VALIDACAO.md. As linhas hist
 | RN-031 | Registro antigo não vira público | P0 | Migração mantém logs antigos PRIVATE e sharingEnabled=false | SQL versionado e ensaio SQL desde vazio; staging Prisma pendente |
 
 A fonte integral da Parte 3 está em referencias/PARTE3.md. Situações implementadas descrevem o código e o escopo dos testes indicados; resultados efetivamente executados e infraestrutura ainda pendente estão em VALIDACAO.md.
+
+## Requisitos adicionais — Parte 4
+
+IDs solicitados preservados. RF-043/044, RNF-026..030 e RN-032..035 ficam reservados; não foram reutilizados. Escopo desta parte: Modo Sessão; exportação de ficha permanece planejada para etapa posterior.
+
+| ID | Requisito | Prioridade | Critério de aceitação verificável | Teste / evidência |
+|---|---|---|---|---|
+| RF-045 | Criar sessões de jogo | P0 | GM ativo cria título/horário/visibilidade privada; jogador/ADMIN sem vínculo GM é rejeitado | game.test.ts autorização; E2E game |
+| RF-046 | Iniciar sessões | P0 | SCHEDULED → ACTIVE com versão/motivo; apenas um slot vivo por campanha | Integração de estado e início concorrente |
+| RF-047 | Pausar sessões | P0 | ACTIVE → PAUSED, evento persistido e novas ações mecânicas bloqueadas na sala | Integração e E2E game |
+| RF-048 | Retomar sessões | P0 | PAUSED → ACTIVE com GM e versão atuais | Integração e E2E game |
+| RF-049 | Encerrar sessões | P0 | ACTIVE/PAUSED → FINISHED, retrato final e histórico mantidos; sem reabertura automática | Integração de fechamento/resumo e E2E |
+| RF-050 | Entrar em sessão ativa | P0 | Membro aceito entra com ficha própria vinculada; GM pode acompanhar sem personagem | Integração ingresso/IDs e E2E |
+| RF-051 | Consultar participantes | P0 | Uma pessoa por usuário; apenas elenco aceito e informações de ficha autorizadas | Integração presença/privacidade e E2E |
+| RF-052 | Rolagens compartilhadas | P0 | Servidor gera d4/d6/d8/d10/d12/d20/d100 e 1..100 dados; PUBLIC chega ao grupo autorizado | Unitário motor, integração MySQL, SSE e E2E |
+| RF-053 | Rolagens privadas | P0 | PRIVATE só autor e GM quando permitido; filtros/cursores não revelam resultados ou totais ocultos | Integração de visibilidade/cursores/PE |
+| RF-054 | Rolagens do mestre | P0 | GM_ONLY/GM_SHARED exigem GM/contexto; sem personagem permitido em dados livres | Integração e E2E de contexto |
+| RF-055 | Registrar resultados | P0 | Persistir campanha/sala/ator/personagem/expressão/resultados/alvos/modificadores/visibilidade/data | Integração consulta direta MySQL |
+| RF-056 | Sincronizar eventos | P0 | SSE só sinaliza IDs/tipos autorizados; REST reconcilia estado; fallback disponível | Integração SSE real e E2E fallback |
+| RF-057 | Consultar histórico | P0 | Eventos tipados mecânicos/narrativos/organização, filtrados antes da paginação | Integração cursores/segredos e E2E |
+| RF-058 | Alterar recursos na sessão | P0 | Mesmo serviço da ficha, limites e versão; delta calculado no MySQL; UUID não duplica | Integração recursos/PE e E2E |
+| RF-059 | Registrar condições | P0 | Fadiga/sangramento/crítico/ferimentos persistem e geram projeção segura; sem rolagem automática | Integração de condições e E2E |
+| RF-060 | Criar anotações | P0 | Título/conteúdo/autor/data/classe de visibilidade persistidos | Integração diário e E2E |
+| RF-061 | Consultar notas autorizadas | P0 | PRIVATE só autor, GM_ONLY só GM explícito; edição com versão e visibilidade imutável | Integração diário/versão e E2E |
+| RF-062 | Gerar resumo da sessão | P0 | Usar retrato final, registros visíveis e narrativa manual; sem inventar acontecimentos | Integração resumo e E2E |
+| RF-063 | Presença aproximada | P1 | Heartbeat 20 s, ONLINE <45 s, AWAY <90 s, OFFLINE após expirar; agrega abas | Unitários presença, integração MySQL |
+| RF-064 | Recuperar após reconexão | P0 | Refetch e cursores recuperam estado/eventos; duplicados não reaplicam ações; offline não confirma | Integração e E2E offline/fallback |
+| RF-065 | Movimentações de inventário | P0 | CRUD, uso/descarte por quantidade com versão e evento; sem efeitos automáticos | Integração inventário/eventos e componentes da ficha |
+| RF-066 | Transferência autorizada | P1 | Desativada por padrão; opt-in GM auditado, aceite/capacidade/estoque/versão numa transação | Integração transferências, concorrência, capacidade, campanha e estoque obsoleto |
+
+| ID | Requisito não funcional | Meta / critério | Evidência e limites |
+|---|---|---|---|
+| RNF-031 | Sincronização eficiente | SSE 2 s, invalidar consultas relacionadas em lote de 250 ms; medir custo por conexão | Integração/E2E funcionais; carga ainda pendente |
+| RNF-032 | Recuperação após desconexão | Revalidar estado ao voltar online, manter histórico MySQL e permitir páginas por cursor | Integração de cursores e E2E offline |
+| RNF-033 | Eventos persistentes | Evento mecânico e mudança na mesma transação; banco é fonte oficial | Integração real MySQL e inspeção de outbox |
+| RNF-034 | Acesso a eventos privados | Filtrar no SQL antes de sinal SSE, JSON, paginação e contagem; sem sequência pública | Integração de segredos, SSE, filtros e resumo |
+| RNF-035 | Geração segura | crypto.randomInt, validação 1..100 dados e faces permitidas; rejeitar results/outcome do cliente | Unitário motor e integração payload proibido |
+| RNF-036 | Operações sem duplicação | Mesma operação/ator/payload não repete gasto, item ou log; conteúdo diferente conflita | Integração PE/recurso/transferência concorrentes |
+| RNF-037 | Mobile-first | Abas próprias e recursos rápidos, sem overflow da página em Pixel 7 | E2E e screenshots; 360 px/aparelho físico/acessibilidade integral pendentes |
+| RNF-038 | Desempenho de sessão | Meta staging aquecido: p95 mudança→tela ≤5 s SSE / ≤20 s fallback, 20 usuários | Testes funcionais usam limites de espera; p95/carga/produção não verificados |
+| RNF-039 | Conexões instáveis | Reconexão SSE, fallback 15 s, tentativa SSE após 30 s; mutação offline falha imediatamente | E2E com navegador offline e stream bloqueado |
+| RNF-040 | Compatibilidade de hospedagem | Mesma origem, SSE sem buffering/compressão, MySQL externo com TLS, desligamento de streams | Configuração/código locais; Render/proxy/TLS reais pendentes |
+| RNF-041 | Integridade transacional | Locks em ordem, versões e FK/CHECK; rollback em capacidade/estoque/estado inválido | Integrações e migração versionada |
+| RNF-042 | Histórico auditável | Autor/data/visibilidade/antes-depois mecânico persistidos; resumo não expõe totais secretos | Integração de eventos/resumo e histórico legado |
+
+| ID | Regra de negócio | Aplicação / teste |
+|---|---|---|
+| RN-036 | Só GM autorizado inicia sessão | Vínculo ACTIVE/GM; teste nega PLAYER e ADMIN global |
+| RN-037 | Só participantes autorizados acessam | Vínculo da campanha reconsultado em REST/SSE; remoção fecha stream |
+| RN-038 | Rolagens oficiais no servidor | Motor único e contrato estrito; testes de faces e payload |
+| RN-039 | Rolagens privadas protegidas | SQL + contexto + permissão da sessão; teste PRIVATE/GM_ONLY/legado |
+| RN-040 | Eventos secretos não enviados a jogadores | Filtragem anterior ao sinal e ao cursor; teste SSE real |
+| RN-041 | Recursos respeitam limites | Serviços anteriores reutilizados; integração de limite/delta |
+| RN-042 | Gastos PE transacionais | Saldo, decisão e eventos na transação; testes de bônus/repetição |
+| RN-043 | Operação duplicada tem um efeito | UUID + hash + versão; integração simultânea |
+| RN-044 | Sessão encerrada consultável | FINISHED bloqueia novas mecânicas, preserva histórico/resumo autorizado |
+| RN-045 | Anotação privada respeita permissões | PRIVATE só autor; GM não recebe nota pessoal; teste diário |
+| RN-046 | Online não significa presença física | Expiração por relógio e rótulo aproximado; teste de abas/ausência |
+| RN-047 | Transferência preserva quantidades | Aceite atômico e rollback; capacidade e versão revalidadas |
+| RN-048 | ADMIN não recebe narrativa automaticamente | Papel global separado de GM/contexto; integração e E2E com ADMIN jogador |
+| RN-049 | Banco é fonte oficial | Rolagens/eventos/estado persistidos; SSE distribui sinais |
+| RN-050 | Sincronização não substitui regra backend | Sinal não aplica saldo no cliente; servidor valida cada operação |
+
+Resultados exatos e falhas corrigidas da Parte 4 são registrados em VALIDACAO.md. Esta tabela identifica critérios e testes; não declara infraestrutura, p95 ou todos os RNF comprovados.

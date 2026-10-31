@@ -18,3 +18,10 @@ O build compila o React em apps/web/dist e o Express serve esses arquivos na mes
 O usuário runtime necessita operações no domínio, INSERT/SELECT nos logs e CRUD em sessões/códigos. Não deve ter DROP/ALTER nem UPDATE/DELETE de logs. Migrações usam outra credencial. A segregação deve ser configurada e verificada no provedor; não foi provisionada automaticamente.
 
 Inspeção: MySQL Workbench conecta ao mesmo host, porta, usuário autorizado e TLS (modo de verificar identidade/CA conforme provedor). Use usuário read-only para inspeção e nunca copie credenciais para a documentação. Schema e tabelas têm nomes mapeados para snake_case.
+
+
+## SSE e Modo Sessão
+
+Parte 4 adiciona /api/sessions/:id/stream. Manter mesma origem HTTPS, cookies existentes e MySQL externo. Não habilitar buffering/compressão para text/event-stream; respeitar Cache-Control:no-transform e X-Accel-Buffering:no. Conferir timeouts do plano/proxy Render, reconexão e fallback reais antes de publicar; nenhum ensaio de produção foi realizado. SIGTERM fecha streams e permite desligamento normal. Sem variável obrigatória nova; tempos, limites e metas em SINCRONIZACAO.md.
+
+Há quatro migrações versionadas. Transferências são false por padrão. Rate limit e cap de streams ainda são por processo: não escalar horizontalmente sem store/limites compartilhados e teste de carga/custo do polling SSE no MySQL. Segredos narrativos não podem ser publicados por cache/CDN; respostas API continuam no-store.

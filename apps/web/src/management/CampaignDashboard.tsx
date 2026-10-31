@@ -607,6 +607,14 @@ export function CampaignDashboard() {
           </Link>
         ) : null}
       </ManagementHeading>
+      {c.membershipStatus === "ACTIVE" && (
+        <Link
+          className="button secondary"
+          to={"/campaigns/" + id + "/sessions" + (manage ? "?mode=gm" : "")}
+        >
+          Sessões de jogo
+        </Link>
+      )}
       {manage && (
         <div className="context-banner">
           <ShieldCheck size={19} />

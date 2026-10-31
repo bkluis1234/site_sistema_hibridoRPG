@@ -19,6 +19,7 @@ for (const signal of ["SIGTERM", "SIGINT"] as const)
   process.on(signal, () => {
     if (stopping) return;
     stopping = true;
+    app.locals.closeGameStreams?.();
     server.close(() => void db.$disconnect().then(() => process.exit(0)));
     setTimeout(() => process.exit(1), 10000).unref();
   });

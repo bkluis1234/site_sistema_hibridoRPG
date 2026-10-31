@@ -16,6 +16,53 @@ export async function cleanupUsers(db: PrismaClient, names: string[]) {
     select: { id: true },
   });
   const campaignIds = ownedCampaigns.map((c) => c.id);
+  const games = await db.gameSession.findMany({
+    where: { campaignId: { in: campaignIds } },
+    select: { id: true },
+  });
+  const gameIds = games.map((g) => g.id);
+  await db.itemTransfer.deleteMany({
+    where: {
+      OR: [
+        { gameSessionId: { in: gameIds } },
+        { requesterId: { in: ids } },
+        { sourceCharacterId: { in: characterIds } },
+        { destinationCharacterId: { in: characterIds } },
+      ],
+    },
+  });
+  await db.sessionEvent.deleteMany({
+    where: {
+      OR: [
+        { gameSessionId: { in: gameIds } },
+        { authorId: { in: ids } },
+        { recipientId: { in: ids } },
+        { ownerId: { in: ids } },
+        { characterId: { in: characterIds } },
+      ],
+    },
+  });
+  await db.sessionNote.deleteMany({
+    where: {
+      OR: [{ gameSessionId: { in: gameIds } }, { authorId: { in: ids } }],
+    },
+  });
+  await db.presenceRecord.deleteMany({
+    where: {
+      OR: [{ gameSessionId: { in: gameIds } }, { userId: { in: ids } }],
+    },
+  });
+  await db.sessionParticipant.deleteMany({
+    where: {
+      OR: [
+        { gameSessionId: { in: gameIds } },
+        { userId: { in: ids } },
+        { characterId: { in: characterIds } },
+      ],
+    },
+  });
+  await db.diceRoll.deleteMany({ where: { gameSessionId: { in: gameIds } } });
+  await db.gameSession.deleteMany({ where: { id: { in: gameIds } } });
   await db.adminAuthorization.deleteMany({ where: { userId: { in: ids } } });
   await db.managementOperation.deleteMany({ where: { actorId: { in: ids } } });
   await db.notification.deleteMany({ where: { userId: { in: ids } } });

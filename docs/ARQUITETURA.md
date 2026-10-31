@@ -69,3 +69,12 @@ management-routes.ts concentra contratos e limites das rotas; management-service
 Novos modelos: CampaignAuditLog, CharacterNote com escopo GM, Notification, ManagementOperation, AdminAuthorization e PlatformSettings. Modelos existentes ganham estados de vínculo/campanha, limites de convite, preferências de compartilhamento e visibilidade/justificativa dos logs. SQL preserva registros anteriores e mantém conteúdo fechado por padrão. FK de escopo da nota usa ON UPDATE RESTRICT para compatibilidade com CHECK no MySQL 8.4.
 
 Privacidade é aplicada ao construir resposta e histórico, sem confiar em esconder campos no React. PUBLIC não é acesso anônimo. PRIVATE pertence ao dono; GM_ONLY requer vínculo e origem. Operador de infraestrutura pode acessar dados; proteção contra spoilers não é absoluta. Notificações/consultas usam polling 30 s e invalidação; WebSocket fica para evolução futura.
+
+
+## Ampliação da Parte 4
+
+GameSession é entidade diferente de Session (autenticação). Eventos, diário, participantes e presença têm tabelas próprias com FK/índices. DiceRoll é ampliado com sala/campanha/visibilidade; usa o motor anterior extraído para dice-engine.ts. ItemTransfer guarda propostas e revisão; configuração false por padrão. Migração 202610310004_game_sessions preserva registros anteriores.
+
+Game-service autoriza campanha/contexto e opera sob transação; game-routes valida contratos. Game-events cria outbox transacional com projeções mecânicas e sequência interna; sala e rotas anteriores da ficha participam da integração. Campanha é bloqueada antes de ficha/sala, e transferências ordenam duas fichas por ID. Recursos/dados continuam exclusivamente no MySQL.
+
+SSE envia somente sinais autorizados {eventId,type}, revalida autenticação/membro/papel em cada ciclo e fecha no desligamento. REST fornece conteúdo filtrado e snapshots. Fallback/presença/limites e metas de infraestrutura em SINCRONIZACAO.md. GLOBAL ADMIN não recebe bypass narrativo. Rotas da sala são chunks lazy no frontend; o bundle anterior ainda exige otimização de carregamento/medição em staging.

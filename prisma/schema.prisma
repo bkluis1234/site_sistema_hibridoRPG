@@ -80,6 +80,16 @@ model User {
   managementOperations ManagementOperation[]
   adminAuthorizations  AdminAuthorization[]
 
+  hostedGameSessions GameSession[]        @relation("gameHost")
+  gameParticipations SessionParticipant[]
+  gameEvents         SessionEvent[]       @relation("eventAuthor")
+  receivedGameEvents SessionEvent[]       @relation("eventRecipient")
+  ownedGameEvents    SessionEvent[]       @relation("eventOwner")
+  sessionNotes       SessionNote[]
+  presenceRecords    PresenceRecord[]
+  itemTransfers      ItemTransfer[]       @relation("transferRequester")
+  reviewedTransfers  ItemTransfer[]       @relation("transferReviewer")
+
   @@map("users")
 }
 
@@ -93,6 +103,7 @@ model Session {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   adminAuthorizations AdminAuthorization[]
+  presenceRecords     PresenceRecord[]
 
   @@index([userId])
   @@index([expiresAt])
@@ -151,6 +162,11 @@ model Campaign {
   scopedNotes         CharacterNote[]
   scopedCharacterLogs CharacterAuditLog[] @relation("CharacterLogScope")
 
+  gameSessions         GameSession[]
+  sessionRolls         DiceRoll[]    @relation("rollCampaign")
+  itemTransfersEnabled Boolean       @default(false)
+  transferApprovalMode String        @default("RECIPIENT") @db.VarChar(30)
+
   @@index([ownerId])
   @@map("campaigns")
 }
@@ -194,49 +210,53 @@ model CampaignInvite {
 }
 
 model Character {
-  id                String                   @id @default(uuid()) @db.Char(36)
-  ownerId           String                   @db.Char(36)
-  owner             User                     @relation(fields: [ownerId], references: [id], onDelete: Restrict)
-  campaignId        String?                  @db.Char(36)
-  campaign          Campaign?                @relation(fields: [campaignId], references: [id], onDelete: Restrict)
-  name              String                   @db.VarChar(80)
-  concept           String                   @db.Text
-  nickname          String                   @default("") @db.VarChar(80)
-  age               Int?
-  height            Decimal?                 @db.Decimal(4, 2)
-  weight            Decimal?                 @db.Decimal(7, 2)
-  profession        String                   @default("") @db.VarChar(160)
-  backstory         String?                  @db.Text
-  appearance        String?                  @db.Text
-  personality       String?                  @db.Text
-  objectives        String?                  @db.Text
-  personalNotes     String?                  @db.Text
-  imagePath         String?                  @db.VarChar(500)
-  sharingEnabled    Boolean                  @default(false)
-  sharingVersion    Int                      @default(1)
-  publicFields      Json?
-  notes             CharacterNote[]
-  identityVersion   Int                      @default(1)
-  attributesVersion Int                      @default(1)
-  skillsVersion     Int                      @default(1)
-  status            CharacterStatus          @default(DRAFT)
-  rulesVersion      String                   @default("2.6") @db.VarChar(20)
-  version           Int                      @default(1)
-  archivedAt        DateTime?
-  createdAt         DateTime                 @default(now())
-  updatedAt         DateTime                 @updatedAt
-  attributes        CharacterAttribute[]
-  skills            CharacterSkill[]
-  resources         CharacterResource[]
-  inventory         InventoryItem[]
-  weapons           CharacterWeapon[]
-  conditions        CharacterCondition[]
-  injuries          CharacterInjury[]
-  changes           CharacterChangeRequest[]
-  auditLogs         CharacterAuditLog[]
-  conditionState    CharacterConditionState?
-  rolls             DiceRoll[]
-  operations        CharacterOperation[]
+  id                 String                   @id @default(uuid()) @db.Char(36)
+  ownerId            String                   @db.Char(36)
+  owner              User                     @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  campaignId         String?                  @db.Char(36)
+  campaign           Campaign?                @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  name               String                   @db.VarChar(80)
+  concept            String                   @db.Text
+  nickname           String                   @default("") @db.VarChar(80)
+  age                Int?
+  height             Decimal?                 @db.Decimal(4, 2)
+  weight             Decimal?                 @db.Decimal(7, 2)
+  profession         String                   @default("") @db.VarChar(160)
+  backstory          String?                  @db.Text
+  appearance         String?                  @db.Text
+  personality        String?                  @db.Text
+  objectives         String?                  @db.Text
+  personalNotes      String?                  @db.Text
+  imagePath          String?                  @db.VarChar(500)
+  sharingEnabled     Boolean                  @default(false)
+  sharingVersion     Int                      @default(1)
+  publicFields       Json?
+  notes              CharacterNote[]
+  identityVersion    Int                      @default(1)
+  attributesVersion  Int                      @default(1)
+  skillsVersion      Int                      @default(1)
+  status             CharacterStatus          @default(DRAFT)
+  rulesVersion       String                   @default("2.6") @db.VarChar(20)
+  version            Int                      @default(1)
+  archivedAt         DateTime?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  attributes         CharacterAttribute[]
+  skills             CharacterSkill[]
+  resources          CharacterResource[]
+  inventory          InventoryItem[]
+  weapons            CharacterWeapon[]
+  conditions         CharacterCondition[]
+  injuries           CharacterInjury[]
+  changes            CharacterChangeRequest[]
+  auditLogs          CharacterAuditLog[]
+  conditionState     CharacterConditionState?
+  rolls              DiceRoll[]
+  operations         CharacterOperation[]
+  gameParticipations SessionParticipant[]
+  gameEvents         SessionEvent[]
+  outgoingTransfers  ItemTransfer[]           @relation("transferSource")
+  incomingTransfers  ItemTransfer[]           @relation("transferDestination")
 
   @@index([ownerId, archivedAt])
   @@index([campaignId])
@@ -302,6 +322,7 @@ model InventoryItem {
   version      Int              @default(1)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
+  transfers    ItemTransfer[]
 
   @@index([characterId])
   @@map("inventory_items")
@@ -446,34 +467,47 @@ model CharacterOperation {
 }
 
 model DiceRoll {
-  id                  String    @id @default(uuid()) @db.Char(36)
-  characterId         String    @db.Char(36)
-  character           Character @relation(fields: [characterId], references: [id], onDelete: Restrict)
-  userId              String    @db.Char(36)
-  user                User      @relation("roller", fields: [userId], references: [id], onDelete: Restrict)
-  expression          String    @db.VarChar(20)
+  id                  String         @id @default(uuid()) @db.Char(36)
+  characterId         String?        @db.Char(36)
+  character           Character?     @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  userId              String         @db.Char(36)
+  user                User           @relation("roller", fields: [userId], references: [id], onDelete: Restrict)
+  expression          String         @db.VarChar(20)
   results             Json
   initialResults      Json
   total               Int
-  skillKey            String?   @db.VarChar(60)
+  skillKey            String?        @db.VarChar(60)
   target              Int?
   baseTarget          Int?
-  fatiguePenalty      Int       @default(0)
-  fatigueApplied      Boolean   @default(false)
-  outcome             String?   @db.VarChar(20)
-  effortMode          String    @default("NONE") @db.VarChar(20)
+  fatiguePenalty      Int            @default(0)
+  fatigueApplied      Boolean        @default(false)
+  outcome             String?        @db.VarChar(20)
+  effortMode          String         @default("NONE") @db.VarChar(20)
   retryRequestedAt    DateTime?
-  retryAuthorizedById String?   @db.Char(36)
-  retryAuthorizedBy   User?     @relation("retryAuthorizer", fields: [retryAuthorizedById], references: [id], onDelete: Restrict)
-  retryCategory       String?   @db.VarChar(20)
+  retryAuthorizedById String?        @db.Char(36)
+  retryAuthorizedBy   User?          @relation("retryAuthorizer", fields: [retryAuthorizedById], references: [id], onDelete: Restrict)
+  retryCategory       String?        @db.VarChar(20)
   finalizedAt         DateTime?
-  version             Int       @default(1)
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  version             Int            @default(1)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  gameSessionId       String?        @db.Char(36)
+  gameSession         GameSession?   @relation(fields: [gameSessionId], references: [id], onDelete: Restrict)
+  campaignId          String?        @db.Char(36)
+  campaign            Campaign?      @relation("rollCampaign", fields: [campaignId], references: [id], onDelete: Restrict)
+  visibility          RollVisibility @default(PRIVATE)
+  privateToGM         Boolean        @default(false)
+  byGM                Boolean        @default(false)
+  category            String         @default("GENERAL") @db.VarChar(20)
+  contextModifier     Int            @default(0)
+  modifierReason      String?        @db.VarChar(500)
+  characterName       String?        @db.VarChar(80)
 
   @@index([characterId, createdAt])
   @@index([userId])
   @@index([retryAuthorizedById])
+  @@index([gameSessionId, createdAt])
+  @@index([campaignId])
   @@map("dice_rolls")
 }
 
@@ -567,4 +601,165 @@ model PlatformSettings {
   updatedAt               DateTime @updatedAt
 
   @@map("platform_settings")
+}
+
+enum GameSessionStatus {
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  FINISHED
+  CANCELLED
+}
+
+enum RollVisibility {
+  PUBLIC
+  PRIVATE
+  GM_ONLY
+  GM_SHARED
+}
+
+model GameSession {
+  id               String               @id @default(uuid()) @db.Char(36)
+  campaignId       String               @db.Char(36)
+  campaign         Campaign             @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  hostId           String               @db.Char(36)
+  host             User                 @relation("gameHost", fields: [hostId], references: [id], onDelete: Restrict)
+  title            String               @db.VarChar(120)
+  scheduledAt      DateTime?
+  status           GameSessionStatus    @default(SCHEDULED)
+  activeSlot       Int?
+  privateRollsToGM Boolean              @default(true)
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  narrativeSummary String?              @db.Text
+  snapshot         Json?
+  eventSequence    Int                  @default(0)
+  version          Int                  @default(1)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  participants     SessionParticipant[]
+  events           SessionEvent[]
+  notes            SessionNote[]
+  rolls            DiceRoll[]
+  presence         PresenceRecord[]
+  transfers        ItemTransfer[]
+
+  @@unique([campaignId, activeSlot])
+  @@index([campaignId, createdAt])
+  @@map("game_sessions")
+}
+
+model SessionParticipant {
+  id            String      @id @default(uuid()) @db.Char(36)
+  gameSessionId String      @db.Char(36)
+  gameSession   GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Restrict)
+  userId        String      @db.Char(36)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  characterId   String?     @db.Char(36)
+  character     Character?  @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  characterName String?     @db.VarChar(80)
+  joinedAt      DateTime    @default(now())
+  version       Int         @default(1)
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([gameSessionId, userId])
+  @@index([characterId])
+  @@map("session_participants")
+}
+
+model SessionEvent {
+  id            String         @id @default(uuid()) @db.Char(36)
+  gameSessionId String         @db.Char(36)
+  gameSession   GameSession    @relation(fields: [gameSessionId], references: [id], onDelete: Restrict)
+  sequence      Int
+  authorId      String         @db.Char(36)
+  author        User           @relation("eventAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  recipientId   String?        @db.Char(36)
+  recipient     User?          @relation("eventRecipient", fields: [recipientId], references: [id], onDelete: Restrict)
+  ownerId       String?        @db.Char(36)
+  owner         User?          @relation("eventOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  characterId   String?        @db.Char(36)
+  character     Character?     @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  type          String         @db.VarChar(60)
+  category      String         @db.VarChar(20)
+  visibility    DataVisibility @default(PUBLIC)
+  privateToGM   Boolean        @default(false)
+  data          Json
+  createdAt     DateTime       @default(now())
+
+  @@unique([gameSessionId, sequence])
+  @@index([gameSessionId, createdAt])
+  @@index([authorId])
+  @@index([recipientId])
+  @@index([ownerId])
+  @@index([characterId])
+  @@map("session_events")
+}
+
+model SessionNote {
+  id            String         @id @default(uuid()) @db.Char(36)
+  gameSessionId String         @db.Char(36)
+  gameSession   GameSession    @relation(fields: [gameSessionId], references: [id], onDelete: Restrict)
+  authorId      String         @db.Char(36)
+  author        User           @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  title         String         @db.VarChar(100)
+  body          String         @db.Text
+  visibility    DataVisibility @default(PRIVATE)
+  version       Int            @default(1)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([gameSessionId, visibility, createdAt])
+  @@index([authorId])
+  @@map("session_notes")
+}
+
+model PresenceRecord {
+  id            String      @id @default(uuid()) @db.Char(36)
+  gameSessionId String      @db.Char(36)
+  gameSession   GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Restrict)
+  userId        String      @db.Char(36)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  authSessionId String      @db.Char(36)
+  authSession   Session     @relation(fields: [authSessionId], references: [id], onDelete: Cascade)
+  clientId      String      @db.Char(36)
+  away          Boolean     @default(false)
+  lastSeenAt    DateTime    @default(now())
+
+  @@unique([gameSessionId, userId, clientId])
+  @@index([gameSessionId, lastSeenAt])
+  @@index([authSessionId])
+  @@map("presence_records")
+}
+
+model ItemTransfer {
+  id                     String         @id @default(uuid()) @db.Char(36)
+  gameSessionId          String         @db.Char(36)
+  gameSession            GameSession    @relation(fields: [gameSessionId], references: [id], onDelete: Restrict)
+  sourceCharacterId      String         @db.Char(36)
+  sourceCharacter        Character      @relation("transferSource", fields: [sourceCharacterId], references: [id], onDelete: Restrict)
+  destinationCharacterId String         @db.Char(36)
+  destinationCharacter   Character      @relation("transferDestination", fields: [destinationCharacterId], references: [id], onDelete: Restrict)
+  sourceItemId           String?        @db.Char(36)
+  sourceItem             InventoryItem? @relation(fields: [sourceItemId], references: [id], onDelete: SetNull)
+  requesterId            String         @db.Char(36)
+  requester              User           @relation("transferRequester", fields: [requesterId], references: [id], onDelete: Restrict)
+  reviewerId             String?        @db.Char(36)
+  reviewer               User?          @relation("transferReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+  status                 ChangeStatus   @default(PENDING)
+  quantity               Int
+  itemVersion            Int
+  itemSnapshot           Json
+  reason                 String?        @db.VarChar(500)
+  version                Int            @default(1)
+  createdAt              DateTime       @default(now())
+  reviewedAt             DateTime?
+  updatedAt              DateTime       @updatedAt
+
+  @@index([gameSessionId, status, createdAt])
+  @@index([sourceItemId])
+  @@index([destinationCharacterId])
+  @@index([requesterId])
+  @@index([reviewerId])
+  @@map("item_transfers")
 }

@@ -1,5 +1,6 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
-import { randomInt } from "node:crypto";
+import { rollExpression } from "./dice-engine.js";
+import { captureSheetEvent } from "./game-events.js";
 import { HttpError } from "./errors.js";
 import { tokenHash } from "./security.js";
 import {
@@ -177,6 +178,7 @@ export async function audit(
       ...(after === undefined ? {} : { afterData: json(after) }),
     },
   });
+  await captureSheetEvent(tx, c, actorId, action, before, after);
   return c.version;
 }
 export async function mutate(
@@ -192,9 +194,18 @@ export async function mutate(
 ) {
   return db.$transaction(
     async (tx) => {
+      // Campanha antes da ficha: mesma ordem da sala, membros e vínculos.
+      const prior = await tx.character.findUnique({
+        where: { id },
+        select: { campaignId: true },
+      });
+      if (prior?.campaignId)
+        await tx.$queryRaw`SELECT id FROM campaigns WHERE id=${prior.campaignId} FOR UPDATE`;
       // Um único lock de ficha ordena transações; versões independentes evitam conflitos entre seções.
       await tx.$queryRaw`SELECT id FROM characters WHERE id=${id} FOR UPDATE`;
       const access = await authorized(tx, id, actorId, true);
+      if ((prior?.campaignId ?? null) !== access.character.campaignId)
+        throw conflict();
       const requestHash = tokenHash(JSON.stringify({ actorId, action, input }));
       const known = await tx.characterOperation.findUnique({
         where: {
@@ -224,7 +235,11 @@ export async function mutate(
       });
       return result;
     },
-    { maxWait: 10000, timeout: 15000 },
+    {
+      isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+      maxWait: 10000,
+      timeout: 15000,
+    },
   );
 }
 export async function getSheet(
@@ -965,6 +980,16 @@ export async function createRoll(
   id: string,
   actorId: string,
   input: z.infer<typeof diceSchema>,
+  context?: {
+    gameSessionId: string;
+    campaignId: string;
+    visibility: "PUBLIC" | "PRIVATE" | "GM_ONLY" | "GM_SHARED";
+    privateToGM: boolean;
+    byGM: boolean;
+    category: string;
+    contextModifier?: number;
+    modifierReason?: string;
+  },
 ) {
   const sheet = await tx.character.findUniqueOrThrow({
     where: { id },
@@ -1006,8 +1031,9 @@ export async function createRoll(
       physical,
     );
   }
-  const [count, sides] = expression.split("d").map(Number) as [number, number];
-  const results = Array.from({ length: count }, () => randomInt(1, sides + 1));
+  if (target !== null)
+    target = Math.min(19, target + (context?.contextModifier ?? 0));
+  const results = rollExpression(expression);
   const total = results.reduce((a, b) => a + b, 0);
   // Um novo teste encerra a janela de decisão do anterior; não cobra PE.
   await tx.diceRoll.updateMany({
@@ -1029,16 +1055,24 @@ export async function createRoll(
       fatigueApplied: applied,
       outcome: target === null ? null : resolveSkillCheck(results[0]!, target),
       finalizedAt: target === null ? new Date() : null,
+      ...(context ? { ...context, characterName: sheet.name } : {}),
     },
   });
-  await audit(tx, id, actorId, "DICE_ROLLED", undefined, roll);
+  if (!context) await audit(tx, id, actorId, "DICE_ROLLED", undefined, roll);
   return { roll };
 }
-async function openRoll(tx: Tx, id: string, rollId: string, version: number) {
+async function openRoll(
+  tx: Tx,
+  id: string,
+  rollId: string,
+  version: number,
+  gameSessionId?: string,
+) {
   const roll = await tx.diceRoll.findFirst({
     where: { id: rollId, characterId: id },
   });
-  if (!roll) throw new HttpError(404, "NOT_FOUND", "Rolagem não encontrada.");
+  if (!roll || roll.gameSessionId !== (gameSessionId ?? null))
+    throw new HttpError(404, "NOT_FOUND", "Rolagem não encontrada.");
   assertVersion(roll.version, version);
   if (roll.finalizedAt || !roll.skillKey || roll.target === null)
     throw new HttpError(409, "ROLL_CLOSED", "Esta rolagem já foi encerrada.");
@@ -1050,8 +1084,9 @@ export async function effort(
   actorId: string,
   rollId: string,
   input: z.infer<typeof effortSchema>,
+  gameSessionId?: string,
 ) {
-  const roll = await openRoll(tx, id, rollId, input.version);
+  const roll = await openRoll(tx, id, rollId, input.version, gameSessionId);
   if (roll.userId !== actorId)
     throw new HttpError(
       403,
@@ -1081,7 +1116,8 @@ export async function effort(
       where: { id: roll.id },
       data: { retryRequestedAt: new Date(), version: { increment: 1 } },
     });
-    await audit(tx, id, actorId, "RETRY_REQUESTED", roll, updated);
+    if (!gameSessionId)
+      await audit(tx, id, actorId, "RETRY_REQUESTED", roll, updated);
     return { roll: updated };
   }
   if (input.action === "ACCEPT") {
@@ -1089,7 +1125,8 @@ export async function effort(
       where: { id: roll.id },
       data: { finalizedAt: new Date(), version: { increment: 1 } },
     });
-    await audit(tx, id, actorId, "ROLL_ACCEPTED", roll, updated);
+    if (!gameSessionId)
+      await audit(tx, id, actorId, "ROLL_ACCEPTED", roll, updated);
     return { roll: updated };
   }
   if (input.action === "RETRY") {
@@ -1129,7 +1166,9 @@ export async function effort(
       "PE insuficientes para esta opção.",
     );
   const results =
-    input.action === "RETRY" ? [randomInt(1, 21)] : (roll.results as number[]);
+    input.action === "RETRY"
+      ? rollExpression("1d20")
+      : (roll.results as number[]);
   const target =
     input.action === "BONUS" ? Math.min(19, roll.target! + 2) : roll.target!;
   const updated = await tx.diceRoll.update({
@@ -1153,8 +1192,10 @@ export async function effort(
     id,
     actorId,
     "EFFORT_" + input.action,
-    { roll, PE: pe.current },
-    { roll: updated, PE: pe.current - cost },
+    gameSessionId ? { PE: pe.current } : { roll, PE: pe.current },
+    gameSessionId
+      ? { PE: pe.current - cost }
+      : { roll: updated, PE: pe.current - cost },
   );
   return { roll: updated, spent: cost };
 }
@@ -1165,6 +1206,7 @@ export async function authorizeRetry(
   rollId: string,
   input: z.infer<typeof authorizeRetrySchema>,
   isGM: boolean,
+  gameSessionId?: string,
 ) {
   if (!isGM)
     throw new HttpError(
@@ -1172,7 +1214,7 @@ export async function authorizeRetry(
       "GM_REQUIRED",
       "Somente um GM vinculado à campanha pode autorizar esta repetição.",
     );
-  const roll = await openRoll(tx, id, rollId, input.version);
+  const roll = await openRoll(tx, id, rollId, input.version, gameSessionId);
   if (
     roll.outcome !== "FAILURE" ||
     roll.effortMode !== "NONE" ||
@@ -1192,14 +1234,15 @@ export async function authorizeRetry(
       version: { increment: 1 },
     },
   });
-  await audit(
-    tx,
-    id,
-    actorId,
-    "RETRY_AUTHORIZED",
-    { roll },
-    { roll: updated, category: input.category, reason: input.reason },
-  );
+  if (!gameSessionId)
+    await audit(
+      tx,
+      id,
+      actorId,
+      "RETRY_AUTHORIZED",
+      { roll },
+      { roll: updated, category: input.category, reason: input.reason },
+    );
   return { roll: updated };
 }
 

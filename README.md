@@ -1,6 +1,6 @@
 # Sistema Híbrido 2.6
 
-Plataforma real de fichas da campanha de Marcus. Versão 0.3.0: fundação e ficha digital preservadas; campanhas, convites de jogadores, painel do mestre, aprovação mecânica, compartilhamento filtrado e administração integrados com persistência MySQL e controle de conflitos. A auditoria das Partes 1/2 foi executada antes da ampliação (docs/AUDITORIA_PARTES_1_2.md).
+Plataforma real de fichas da campanha de Marcus. Versão 0.4.0: fundação, fichas e campanhas preservadas; Modo Sessão com rolagens compartilhadas, sobrevivência, diário, presença aproximada, SSE/reconexão e histórico MySQL. Auditoria obrigatória das Partes 1/2/3 executada antes da ampliação (docs/AUDITORIA_PARTE_4.md).
 
 A imagem oficial e as regras explícitas da Parte 2 foram utilizadas. O manual completo continua pendente de conferência. **Upload persistente de imagens e publicação ainda não estão concluídos.** O seletor de imagem mostra apenas prévia local até configurar storage externo.
 
@@ -52,12 +52,22 @@ O diretório de trabalho deve ser a raiz do monorepositório. O cadastro normal 
 
 ## Testar com MySQL
 
-Copie `.env.test.example` para `.env.test` e preencha com `NODE_ENV=test`, DATABASE_URL apontando para um banco **dedicado** cujo nome termine em `_test`, APP_ORIGIN=http://localhost:5173 e CSRF_SECRET aleatório. Nunca use banco de jogadores nos testes. Os testes de integração apagam somente seus registros `it_*`; os testes novos de campanha também removem seus registros sintéticos `c3_*`/`e3_*`; os E2E anteriores deixam registros `e2e_*` no banco descartável. A guarda impede rodar em nomes sem `_test`, mas não substitui conferir host e credenciais.
+Copie `.env.test.example` para `.env.test` e preencha com `NODE_ENV=test`, DATABASE_URL apontando para um banco **dedicado** cujo nome termine em `_test`, APP_ORIGIN=http://localhost:5173 e CSRF_SECRET aleatório. Nunca use banco de jogadores nos testes. Os testes de integração apagam somente seus registros `it_*`; os testes novos de campanha/sessão também removem seus registros sintéticos `c3_*`/`e3_*`/`g4_*`/`e4_*`; os E2E anteriores deixam registros `e2e_*` no banco descartável. A guarda impede rodar em nomes sem `_test`, mas não substitui conferir host e credenciais.
 
-Aplique primeiro a migração no banco de teste com `npm run db:test:deploy`, que carrega `.env.test` e valida a guarda de ambiente antes de chamar o Prisma. Não copie credenciais de produção. `npm exec -- playwright install chromium` instala o navegador necessário (sistemas Linux podem precisar das dependências nativas do Playwright). Em seguida execute integração e E2E. O runner executa cada arquivo e perfil (desktop/mobile) com servidores novos, isolando o limite real de tentativas por IP entre dispositivos simulados. Não desativa a proteção da API. Os relatórios ficam em subpastas por arquivo/perfil de test-results e playwright-report. A regressão registrada da versão 0.3.0 tem 51 testes unitários, 60 de integração e 14 E2E aprovados; detalhes e limites em docs/VALIDACAO.md.
+Aplique primeiro a migração no banco de teste com `npm run db:test:deploy`, que carrega `.env.test` e valida a guarda de ambiente antes de chamar o Prisma. Não copie credenciais de produção. `npm exec -- playwright install chromium` instala o navegador necessário (sistemas Linux podem precisar das dependências nativas do Playwright). Em seguida execute integração e E2E. O runner executa cada arquivo e perfil (desktop/mobile) com servidores novos, isolando o limite real de tentativas por IP entre dispositivos simulados. Não desativa a proteção da API. Os relatórios ficam em subpastas por arquivo/perfil de test-results e playwright-report. Resultados efetivamente executados e limites da versão atual estão em docs/VALIDACAO.md; a auditoria de entrada da Parte 4 repetiu os 125 cenários anteriores com sucesso. A regressão final tem 186 testes aprovados (78 unitários, 90 integrações MySQL e 18 E2E).
+
+## Usar o Modo Sessão
+
+Na campanha, abra Sessões de jogo. GM pode agendar/iniciar/pausar/retomar/encerrar; jogadores aceitos entram com ficha própria vinculada. Sala em /campaigns/:campaignId/sessions/:sessionId. Desktop com três colunas; celular com abas e recursos rápidos. Rolagens oficiais reutilizam o motor existente; resultados secretos são filtrados no servidor, inclusive nas rotas legadas. ADMIN global continua jogador sem acesso GM automático.
+
+SSE usa a mesma origem/cookies, sem token na URL ou biblioteca nova. Se a conexão falhar, polling e refetch recuperam o estado do MySQL. Nenhuma variável obrigatória nova: tempos/limites e configuração do proxy estão em docs/SINCRONIZACAO.md. Transferências estão desativadas por padrão; só GM habilita após aprovar o fluxo da campanha. Nenhuma campanha real foi habilitada nos testes.
 
 ## Continuidade e publicação
 
+- [Modo Sessão](docs/MODO_SESSAO.md)
+- [Rolagens e PE](docs/ROLAGENS.md)
+- [Sincronização e reconexão](docs/SINCRONIZACAO.md)
+- [Auditoria de entrada da Parte 4](docs/AUDITORIA_PARTE_4.md)
 - [Campanhas e fluxo do grupo](docs/CAMPANHAS.md)
 - [Permissões e privacidade](docs/PERMISSOES.md)
 - [Administração reforçada](docs/ADMINISTRACAO.md)

@@ -68,3 +68,5 @@ export type CharacterSummary = {
 export * from "./sheet.js";
 
 export * from "./campaigns.js";
+
+export * from "./game.js";
