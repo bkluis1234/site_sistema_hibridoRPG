@@ -1,379 +1,570 @@
 generator client {
   provider = "prisma-client-js"
 }
+
 datasource db {
   provider = "mysql"
 }
+
+enum DataVisibility {
+  PUBLIC
+  PRIVATE
+  GM_ONLY
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  FINISHED
+  ARCHIVED
+}
+
+enum MemberStatus {
+  PENDING
+  ACTIVE
+  REMOVED
+  REJECTED
+}
+
 enum GlobalRole {
   ADMIN
   PLAYER
 }
+
 enum CampaignRole {
   GM
   PLAYER
 }
+
 enum CharacterStatus {
   DRAFT
   PENDING_APPROVAL
   APPROVED
   ARCHIVED
 }
+
 enum ChangeStatus {
   PENDING
   APPROVED
   REJECTED
 }
+
 model User {
-  id String @id @default(uuid()) @db.Char(36)
-  username String @unique @db.VarChar(32)
-  passwordHash String @db.VarChar(255)
-  role GlobalRole @default(PLAYER)
-  canCreateCampaigns Boolean @default(false)
-  bootstrapKey String? @unique @db.VarChar(32)
-  disabledAt DateTime?
-  version Int @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  sessions Session[]
-  recoveryCodes RecoveryCode[]
-  characters Character[]
-  memberships CampaignMember[]
-  campaigns Campaign[]
-  campaignInvites CampaignInvite[]
-  privilegeInvites PrivilegeInvite[]
-  changeRequests CharacterChangeRequest[] @relation("requester")
-  reviews CharacterChangeRequest[] @relation("reviewer")
-  characterLogs CharacterAuditLog[]
-  adminLogs AdminAuditLog[]
-  diceRolls DiceRoll[] @relation("roller")
-  authorizedRetries DiceRoll[] @relation("retryAuthorizer")
+  id                   String                   @id @default(uuid()) @db.Char(36)
+  username             String                   @unique @db.VarChar(32)
+  passwordHash         String                   @db.VarChar(255)
+  role                 GlobalRole               @default(PLAYER)
+  canCreateCampaigns   Boolean                  @default(false)
+  bootstrapKey         String?                  @unique @db.VarChar(32)
+  disabledAt           DateTime?
+  version              Int                      @default(1)
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  sessions             Session[]
+  recoveryCodes        RecoveryCode[]
+  characters           Character[]
+  memberships          CampaignMember[]
+  campaigns            Campaign[]
+  campaignInvites      CampaignInvite[]
+  privilegeInvites     PrivilegeInvite[]
+  changeRequests       CharacterChangeRequest[] @relation("requester")
+  reviews              CharacterChangeRequest[] @relation("reviewer")
+  characterLogs        CharacterAuditLog[]
+  adminLogs            AdminAuditLog[]
+  diceRolls            DiceRoll[]               @relation("roller")
+  authorizedRetries    DiceRoll[]               @relation("retryAuthorizer")
+  campaignLogs         CampaignAuditLog[]
+  notes                CharacterNote[]
+  notifications        Notification[]
+  managementOperations ManagementOperation[]
+  adminAuthorizations  AdminAuthorization[]
+
   @@map("users")
 }
+
 model Session {
-  id String @id @default(uuid()) @db.Char(36)
-  tokenHash String @unique @db.Char(64)
-  userId String @db.Char(36)
-  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
-  expiresAt DateTime
-  idleExpiresAt DateTime
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                  String               @id @default(uuid()) @db.Char(36)
+  tokenHash           String               @unique @db.Char(64)
+  userId              String               @db.Char(36)
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt           DateTime
+  idleExpiresAt       DateTime
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  adminAuthorizations AdminAuthorization[]
+
   @@index([userId])
   @@index([expiresAt])
   @@map("sessions")
 }
+
 model RecoveryCode {
-  id String @id @default(uuid()) @db.Char(36)
-  userId String @db.Char(36)
-  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
-  codeHash String @unique @db.Char(64)
-  usedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  @@index([userId,usedAt])
+  id        String    @id @default(uuid()) @db.Char(36)
+  userId    String    @db.Char(36)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String    @unique @db.Char(64)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId, usedAt])
   @@map("recovery_codes")
 }
+
 model PrivilegeInvite {
-  id String @id @default(uuid()) @db.Char(36)
-  codeHash String @unique @db.Char(64)
-  createdById String @db.Char(36)
-  createdBy User @relation(fields:[createdById],references:[id],onDelete:Restrict)
-  expiresAt DateTime
-  usedAt DateTime?
-  revokedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String    @id @default(uuid()) @db.Char(36)
+  codeHash    String    @unique @db.Char(64)
+  createdById String    @db.Char(36)
+  createdBy   User      @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  expiresAt   DateTime
+  usedAt      DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
   @@index([expiresAt])
   @@map("privilege_invites")
 }
+
 model Campaign {
-  id String @id @default(uuid()) @db.Char(36)
-  name String @db.VarChar(100)
-  ownerId String @db.Char(36)
-  owner User @relation(fields:[ownerId],references:[id],onDelete:Restrict)
-  shareSheets Boolean @default(false)
-  physicalSkillKeys Json?
-  archivedAt DateTime?
-  version Int @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  members CampaignMember[]
-  invites CampaignInvite[]
-  characters Character[]
+  id                  String              @id @default(uuid()) @db.Char(36)
+  name                String              @db.VarChar(100)
+  ownerId             String              @db.Char(36)
+  owner               User                @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  description         String?             @db.Text
+  notices             String?             @db.Text
+  gmNotes             String?             @db.Text
+  imagePath           String?             @db.VarChar(500)
+  systemVersion       String              @default("2.6") @db.VarChar(20)
+  status              CampaignStatus      @default(DRAFT)
+  shareSheets         Boolean             @default(false)
+  physicalSkillKeys   Json?
+  archivedAt          DateTime?
+  version             Int                 @default(1)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  members             CampaignMember[]
+  invites             CampaignInvite[]
+  characters          Character[]
+  auditLogs           CampaignAuditLog[]
+  scopedNotes         CharacterNote[]
+  scopedCharacterLogs CharacterAuditLog[] @relation("CharacterLogScope")
+
   @@index([ownerId])
   @@map("campaigns")
 }
+
 model CampaignMember {
-  id String @id @default(uuid()) @db.Char(36)
-  campaignId String @db.Char(36)
-  campaign Campaign @relation(fields:[campaignId],references:[id],onDelete:Restrict)
-  userId String @db.Char(36)
-  user User @relation(fields:[userId],references:[id],onDelete:Restrict)
-  role CampaignRole @default(PLAYER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  @@unique([campaignId,userId])
+  id         String       @id @default(uuid()) @db.Char(36)
+  campaignId String       @db.Char(36)
+  campaign   Campaign     @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  userId     String       @db.Char(36)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  role       CampaignRole @default(PLAYER)
+  status     MemberStatus @default(ACTIVE)
+  version    Int          @default(1)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@unique([campaignId, userId])
   @@index([userId])
   @@map("campaign_members")
 }
+
 model CampaignInvite {
-  id String @id @default(uuid()) @db.Char(36)
-  campaignId String @db.Char(36)
-  campaign Campaign @relation(fields:[campaignId],references:[id],onDelete:Restrict)
-  createdById String @db.Char(36)
-  createdBy User @relation(fields:[createdById],references:[id],onDelete:Restrict)
-  codeHash String @unique @db.Char(64)
-  role CampaignRole @default(PLAYER)
-  expiresAt DateTime
-  usedAt DateTime?
-  revokedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  @@index([campaignId,expiresAt])
+  id          String       @id @default(uuid()) @db.Char(36)
+  campaignId  String       @db.Char(36)
+  campaign    Campaign     @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  createdById String       @db.Char(36)
+  createdBy   User         @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  codeHash    String       @unique @db.Char(64)
+  role        CampaignRole @default(PLAYER)
+  maxUses     Int          @default(1)
+  useCount    Int          @default(0)
+  version     Int          @default(1)
+  expiresAt   DateTime
+  usedAt      DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([campaignId, expiresAt])
   @@map("campaign_invites")
 }
+
 model Character {
-  id String @id @default(uuid()) @db.Char(36)
-  ownerId String @db.Char(36)
-  owner User @relation(fields:[ownerId],references:[id],onDelete:Restrict)
-  campaignId String? @db.Char(36)
-  campaign Campaign? @relation(fields:[campaignId],references:[id],onDelete:Restrict)
-  name String @db.VarChar(80)
-  concept String @db.Text
-  nickname String @default("") @db.VarChar(80)
-  age Int?
-  height Decimal? @db.Decimal(4,2)
-  weight Decimal? @db.Decimal(7,2)
-  profession String @default("") @db.VarChar(160)
-  backstory String? @db.Text
-  appearance String? @db.Text
-  personality String? @db.Text
-  objectives String? @db.Text
-  personalNotes String? @db.Text
-  imagePath String? @db.VarChar(500)
-  identityVersion Int @default(1)
-  attributesVersion Int @default(1)
-  skillsVersion Int @default(1)
-  status CharacterStatus @default(DRAFT)
-  rulesVersion String @default("2.6") @db.VarChar(20)
-  version Int @default(1)
-  archivedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  attributes CharacterAttribute[]
-  skills CharacterSkill[]
-  resources CharacterResource[]
-  inventory InventoryItem[]
-  weapons CharacterWeapon[]
-  conditions CharacterCondition[]
-  injuries CharacterInjury[]
-  changes CharacterChangeRequest[]
-  auditLogs CharacterAuditLog[]
-  conditionState CharacterConditionState?
-  rolls DiceRoll[]
-  operations CharacterOperation[]
-  @@index([ownerId,archivedAt])
+  id                String                   @id @default(uuid()) @db.Char(36)
+  ownerId           String                   @db.Char(36)
+  owner             User                     @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  campaignId        String?                  @db.Char(36)
+  campaign          Campaign?                @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  name              String                   @db.VarChar(80)
+  concept           String                   @db.Text
+  nickname          String                   @default("") @db.VarChar(80)
+  age               Int?
+  height            Decimal?                 @db.Decimal(4, 2)
+  weight            Decimal?                 @db.Decimal(7, 2)
+  profession        String                   @default("") @db.VarChar(160)
+  backstory         String?                  @db.Text
+  appearance        String?                  @db.Text
+  personality       String?                  @db.Text
+  objectives        String?                  @db.Text
+  personalNotes     String?                  @db.Text
+  imagePath         String?                  @db.VarChar(500)
+  sharingEnabled    Boolean                  @default(false)
+  sharingVersion    Int                      @default(1)
+  publicFields      Json?
+  notes             CharacterNote[]
+  identityVersion   Int                      @default(1)
+  attributesVersion Int                      @default(1)
+  skillsVersion     Int                      @default(1)
+  status            CharacterStatus          @default(DRAFT)
+  rulesVersion      String                   @default("2.6") @db.VarChar(20)
+  version           Int                      @default(1)
+  archivedAt        DateTime?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  attributes        CharacterAttribute[]
+  skills            CharacterSkill[]
+  resources         CharacterResource[]
+  inventory         InventoryItem[]
+  weapons           CharacterWeapon[]
+  conditions        CharacterCondition[]
+  injuries          CharacterInjury[]
+  changes           CharacterChangeRequest[]
+  auditLogs         CharacterAuditLog[]
+  conditionState    CharacterConditionState?
+  rolls             DiceRoll[]
+  operations        CharacterOperation[]
+
+  @@index([ownerId, archivedAt])
   @@index([campaignId])
   @@map("characters")
 }
+
 model CharacterAttribute {
-  id String @id @default(uuid()) @db.Char(36)
-  characterId String @db.Char(36)
-  character Character @relation(fields:[characterId],references:[id],onDelete:Restrict)
-  key String @db.VarChar(60)
-  value Int
-  version Int @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  @@unique([characterId,key])
+  id          String    @id @default(uuid()) @db.Char(36)
+  characterId String    @db.Char(36)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  key         String    @db.VarChar(60)
+  value       Int
+  version     Int       @default(1)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([characterId, key])
   @@map("character_attributes")
 }
+
 model CharacterSkill {
-  id String @id @default(uuid()) @db.Char(36)
-  characterId String @db.Char(36)
-  character Character @relation(fields:[characterId],references:[id],onDelete:Restrict)
-  key String @db.VarChar(60)
-  trained Boolean @default(false)
-  modifier Int @default(0)
-  version Int @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  @@unique([characterId,key])
+  id          String    @id @default(uuid()) @db.Char(36)
+  characterId String    @db.Char(36)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  key         String    @db.VarChar(60)
+  trained     Boolean   @default(false)
+  modifier    Int       @default(0)
+  version     Int       @default(1)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([characterId, key])
   @@map("character_skills")
 }
+
 model CharacterResource {
-  id String @id @default(uuid()) @db.Char(36)
-  characterId String @db.Char(36)
-  character Character @relation(fields:[characterId],references:[id],onDelete:Restrict)
-  key String @db.VarChar(60)
-  current Int
-  version Int @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  @@unique([characterId,key])
+  id          String    @id @default(uuid()) @db.Char(36)
+  characterId String    @db.Char(36)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  key         String    @db.VarChar(60)
+  current     Int
+  version     Int       @default(1)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([characterId, key])
   @@map("character_resources")
 }
+
 model InventoryItem {
-  id String @id @default(uuid()) @db.Char(36)
-  characterId String @db.Char(36)
-  character Character @relation(fields:[characterId],references:[id],onDelete:Restrict)
-  name String @db.VarChar(100)
-  quantity Int @default(1)
-  slotsPerUnit Decimal @default(0) @db.Decimal(8,2)
-  description String? @db.Text
-  equipment Boolean @default(false)
-  type String @default("") @db.VarChar(100)
-  damage String @default("") @db.VarChar(80)
-  weapon CharacterWeapon?
-  notes String? @db.Text
-  version Int @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String           @id @default(uuid()) @db.Char(36)
+  characterId  String           @db.Char(36)
+  character    Character        @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  name         String           @db.VarChar(100)
+  quantity     Int              @default(1)
+  slotsPerUnit Decimal          @default(0) @db.Decimal(8, 2)
+  description  String?          @db.Text
+  equipment    Boolean          @default(false)
+  type         String           @default("") @db.VarChar(100)
+  damage       String           @default("") @db.VarChar(80)
+  weapon       CharacterWeapon?
+  notes        String?          @db.Text
+  version      Int              @default(1)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
   @@index([characterId])
   @@map("inventory_items")
 }
+
 model CharacterWeapon {
-  inventoryItemId String? @unique @db.Char(36)
-  inventoryItem InventoryItem? @relation(fields:[inventoryItemId],references:[id],onDelete:Restrict)
-  id String @id @default(uuid()) @db.Char(36)
-  characterId String @db.Char(36)
-  character Character @relation(fields:[characterId],references:[id],onDelete:Restrict)
-  name String @db.VarChar(100)
-  notes String? @db.Text
-  version Int @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  inventoryItemId String?        @unique @db.Char(36)
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  id              String         @id @default(uuid()) @db.Char(36)
+  characterId     String         @db.Char(36)
+  character       Character      @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  name            String         @db.VarChar(100)
+  notes           String?        @db.Text
+  version         Int            @default(1)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
   @@index([characterId])
   @@map("character_weapons")
 }
+
 model CharacterCondition {
-  id String @id @default(uuid()) @db.Char(36)
-  characterId String @db.Char(36)
-  character Character @relation(fields:[characterId],references:[id],onDelete:Restrict)
-  key String @db.VarChar(60)
-  active Boolean @default(true)
-  notes String? @db.Text
-  version Int @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  @@unique([characterId,key])
+  id          String    @id @default(uuid()) @db.Char(36)
+  characterId String    @db.Char(36)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  key         String    @db.VarChar(60)
+  active      Boolean   @default(true)
+  notes       String?   @db.Text
+  version     Int       @default(1)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([characterId, key])
   @@map("character_conditions")
 }
+
 model CharacterInjury {
-  id String @id @default(uuid()) @db.Char(36)
-  characterId String @db.Char(36)
-  character Character @relation(fields:[characterId],references:[id],onDelete:Restrict)
-  description String @db.Text
-  healedAt DateTime?
-  location String @default("") @db.VarChar(160)
-  consequences String? @db.Text
-  status String @default("ACTIVE") @db.VarChar(20)
-  version Int @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String    @id @default(uuid()) @db.Char(36)
+  characterId  String    @db.Char(36)
+  character    Character @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  description  String    @db.Text
+  healedAt     DateTime?
+  location     String    @default("") @db.VarChar(160)
+  consequences String?   @db.Text
+  status       String    @default("ACTIVE") @db.VarChar(20)
+  version      Int       @default(1)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
   @@index([characterId])
   @@map("character_injuries")
 }
+
 model CharacterChangeRequest {
-  id String @id @default(uuid()) @db.Char(36)
-  characterId String @db.Char(36)
-  character Character @relation(fields:[characterId],references:[id],onDelete:Restrict)
-  requesterId String @db.Char(36)
-  requester User @relation("requester",fields:[requesterId],references:[id],onDelete:Restrict)
-  reviewerId String? @db.Char(36)
-  reviewer User? @relation("reviewer",fields:[reviewerId],references:[id],onDelete:Restrict)
-  baseVersion Int
-  patch Json
-  status ChangeStatus @default(PENDING)
-  reviewedAt DateTime?
-  version Int @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  @@index([characterId,status])
+  id            String       @id @default(uuid()) @db.Char(36)
+  characterId   String       @db.Char(36)
+  character     Character    @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  requesterId   String       @db.Char(36)
+  requester     User         @relation("requester", fields: [requesterId], references: [id], onDelete: Restrict)
+  reviewerId    String?      @db.Char(36)
+  reviewer      User?        @relation("reviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+  baseVersion   Int
+  kind          String       @default("ATTRIBUTES") @db.VarChar(20)
+  reason        String?      @db.VarChar(1000)
+  reviewComment String?      @db.VarChar(1000)
+  patch         Json
+  status        ChangeStatus @default(PENDING)
+  reviewedAt    DateTime?
+  version       Int          @default(1)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([characterId, status])
   @@index([requesterId])
   @@index([reviewerId])
   @@map("character_change_requests")
 }
+
 model CharacterAuditLog {
-  id String @id @default(uuid()) @db.Char(36)
-  characterId String @db.Char(36)
-  character Character @relation(fields:[characterId],references:[id],onDelete:Restrict)
-  actorId String @db.Char(36)
-  actor User @relation(fields:[actorId],references:[id],onDelete:Restrict)
-  action String @db.VarChar(80)
-  recordVersion Int
-  beforeData Json?
-  afterData Json?
-  createdAt DateTime @default(now())
-  @@index([characterId,createdAt])
+  id              String         @id @default(uuid()) @db.Char(36)
+  characterId     String         @db.Char(36)
+  character       Character      @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  actorId         String         @db.Char(36)
+  actor           User           @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  action          String         @db.VarChar(80)
+  recordVersion   Int
+  visibility      DataVisibility @default(PRIVATE)
+  campaignScopeId String?        @db.Char(36)
+  campaignScope   Campaign?      @relation("CharacterLogScope", fields: [campaignScopeId], references: [id], onDelete: Restrict)
+  reason          String?        @db.VarChar(1000)
+  beforeData      Json?
+  afterData       Json?
+  createdAt       DateTime       @default(now())
+
+  @@index([characterId, createdAt])
+  @@index([campaignScopeId, visibility])
   @@index([actorId])
   @@map("character_audit_logs")
 }
+
 model AdminAuditLog {
-  id String @id @default(uuid()) @db.Char(36)
-  actorId String @db.Char(36)
-  actor User @relation(fields:[actorId],references:[id],onDelete:Restrict)
-  action String @db.VarChar(80)
-  targetId String? @db.VarChar(100)
-  reason String? @db.VarChar(500)
+  id        String   @id @default(uuid()) @db.Char(36)
+  actorId   String   @db.Char(36)
+  actor     User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  action    String   @db.VarChar(80)
+  targetId  String?  @db.VarChar(100)
+  reason    String?  @db.VarChar(500)
   createdAt DateTime @default(now())
-  @@index([actorId,createdAt])
+
+  @@index([actorId, createdAt])
   @@map("admin_audit_logs")
 }
 
 model CharacterConditionState {
-  characterId String @id @db.Char(36)
-  character Character @relation(fields:[characterId],references:[id],onDelete:Restrict)
-  fatigue Int @default(0)
-  bleeding Boolean @default(false)
-  critical Boolean @default(false)
-  incapacitated Boolean @default(false)
-  successes Int @default(0)
-  failures Int @default(0)
-  stabilization String @default("NONE") @db.VarChar(20)
-  version Int @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  characterId   String    @id @db.Char(36)
+  character     Character @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  fatigue       Int       @default(0)
+  bleeding      Boolean   @default(false)
+  critical      Boolean   @default(false)
+  incapacitated Boolean   @default(false)
+  successes     Int       @default(0)
+  failures      Int       @default(0)
+  stabilization String    @default("NONE") @db.VarChar(20)
+  version       Int       @default(1)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
   @@map("character_condition_states")
 }
+
 model CharacterOperation {
-  id String @id @default(uuid()) @db.Char(36)
-  characterId String @db.Char(36)
-  character Character @relation(fields:[characterId],references:[id],onDelete:Restrict)
-  operationId String @db.Char(36)
-  requestHash String @db.Char(64)
-  result Json
-  createdAt DateTime @default(now())
-  @@unique([characterId,operationId])
+  id          String    @id @default(uuid()) @db.Char(36)
+  characterId String    @db.Char(36)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  operationId String    @db.Char(36)
+  requestHash String    @db.Char(64)
+  result      Json
+  createdAt   DateTime  @default(now())
+
+  @@unique([characterId, operationId])
   @@map("character_operations")
 }
+
 model DiceRoll {
-  id String @id @default(uuid()) @db.Char(36)
-  characterId String @db.Char(36)
-  character Character @relation(fields:[characterId],references:[id],onDelete:Restrict)
-  userId String @db.Char(36)
-  user User @relation("roller",fields:[userId],references:[id],onDelete:Restrict)
-  expression String @db.VarChar(20)
-  results Json
-  initialResults Json
-  total Int
-  skillKey String? @db.VarChar(60)
-  target Int?
-  baseTarget Int?
-  fatiguePenalty Int @default(0)
-  fatigueApplied Boolean @default(false)
-  outcome String? @db.VarChar(20)
-  effortMode String @default("NONE") @db.VarChar(20)
-  retryRequestedAt DateTime?
-  retryAuthorizedById String? @db.Char(36)
-  retryAuthorizedBy User? @relation("retryAuthorizer",fields:[retryAuthorizedById],references:[id],onDelete:Restrict)
-  retryCategory String? @db.VarChar(20)
-  finalizedAt DateTime?
-  version Int @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  @@index([characterId,createdAt])
+  id                  String    @id @default(uuid()) @db.Char(36)
+  characterId         String    @db.Char(36)
+  character           Character @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  userId              String    @db.Char(36)
+  user                User      @relation("roller", fields: [userId], references: [id], onDelete: Restrict)
+  expression          String    @db.VarChar(20)
+  results             Json
+  initialResults      Json
+  total               Int
+  skillKey            String?   @db.VarChar(60)
+  target              Int?
+  baseTarget          Int?
+  fatiguePenalty      Int       @default(0)
+  fatigueApplied      Boolean   @default(false)
+  outcome             String?   @db.VarChar(20)
+  effortMode          String    @default("NONE") @db.VarChar(20)
+  retryRequestedAt    DateTime?
+  retryAuthorizedById String?   @db.Char(36)
+  retryAuthorizedBy   User?     @relation("retryAuthorizer", fields: [retryAuthorizedById], references: [id], onDelete: Restrict)
+  retryCategory       String?   @db.VarChar(20)
+  finalizedAt         DateTime?
+  version             Int       @default(1)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([characterId, createdAt])
   @@index([userId])
   @@index([retryAuthorizedById])
   @@map("dice_rolls")
+}
+
+model CampaignAuditLog {
+  id         String   @id @default(uuid()) @db.Char(36)
+  campaignId String   @db.Char(36)
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  actorId    String   @db.Char(36)
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  action     String   @db.VarChar(80)
+  targetId   String?  @db.VarChar(100)
+  beforeData Json?
+  afterData  Json?
+  reason     String?  @db.VarChar(1000)
+  createdAt  DateTime @default(now())
+
+  @@index([campaignId, createdAt])
+  @@index([actorId])
+  @@map("campaign_audit_logs")
+}
+
+model CharacterNote {
+  id          String         @id @default(uuid()) @db.Char(36)
+  campaignId  String?        @db.Char(36)
+  campaign    Campaign?      @relation(fields: [campaignId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  characterId String         @db.Char(36)
+  character   Character      @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  authorId    String         @db.Char(36)
+  author      User           @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  title       String         @db.VarChar(100)
+  body        String         @db.Text
+  visibility  DataVisibility @default(PRIVATE)
+  version     Int            @default(1)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([characterId, visibility])
+  @@index([campaignId, visibility])
+  @@index([authorId])
+  @@map("character_notes")
+}
+
+model Notification {
+  id        String    @id @default(uuid()) @db.Char(36)
+  userId    String    @db.Char(36)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  message   String    @db.VarChar(280)
+  linkPath  String    @db.VarChar(500)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+model ManagementOperation {
+  id          String   @id @default(uuid()) @db.Char(36)
+  actorId     String   @db.Char(36)
+  actor       User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  operationId String   @db.Char(36)
+  requestHash String   @db.Char(64)
+  result      Json?
+  createdAt   DateTime @default(now())
+
+  @@unique([actorId, operationId])
+  @@map("management_operations")
+}
+
+model AdminAuthorization {
+  id        String    @id @default(uuid()) @db.Char(36)
+  userId    String    @db.Char(36)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  sessionId String    @db.Char(36)
+  session   Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique @db.Char(64)
+  strong    Boolean   @default(false)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, expiresAt])
+  @@map("admin_authorizations")
+}
+
+model PlatformSettings {
+  id                      String   @id @default("global") @db.VarChar(20)
+  registrationOpen        Boolean  @default(true)
+  campaignCreationEnabled Boolean  @default(true)
+  version                 Int      @default(1)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@map("platform_settings")
 }

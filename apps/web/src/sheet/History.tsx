@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { api } from "../api";
+import { useSheetClient } from "./client";
 import { ErrorBox } from "../components";
 import { type HistoryEntry } from "../../../../packages/shared/src/index";
 const historyLabels: Record<string, string> = {
@@ -22,8 +22,9 @@ const historyLabels: Record<string, string> = {
   FATIGUE_POLICY_UPDATED: "Configuração de fadiga alterada",
 };
 export function HistoryPanel({ id }: { id: string }) {
+  const { api, gm } = useSheetClient();
   const query = useInfiniteQuery({
-    queryKey: ["sheet-history", id],
+    queryKey: ["sheet-history", id, gm],
     initialPageParam: null as number | null,
     queryFn: ({ pageParam }) =>
       api<{ entries: HistoryEntry[]; nextBefore: number | null }>(
@@ -53,6 +54,7 @@ export function HistoryPanel({ id }: { id: string }) {
                   {new Date(e.createdAt).toLocaleString("pt-BR")} · versão{" "}
                   {e.recordVersion}
                 </p>
+                {e.reason && <p>Justificativa: {e.reason}</p>}
                 {Boolean(e.beforeData || e.afterData) && (
                   <details>
                     <summary>Conferir antes e depois</summary>

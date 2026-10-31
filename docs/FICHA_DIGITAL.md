@@ -63,6 +63,11 @@ GET do histórico é autorizado, paginado por sequência de versão, com até 50
 
 Retrato: seletor, prévia, remoção/substituição local e limite PORTRAIT_MAX_BYTES estão preparados. API informa configured=false. Interface PortraitStorage define put/signedReadUrl/remove, mas nenhum provedor foi configurado e não existe endpoint inseguro para simular upload. Integração futura exige objeto externo persistente, validação real da imagem no servidor, remoção de metadados e autorização por ficha. Não usar disco temporário do Render. A imagem não será salva ao pressionar Salvar identificação nesta entrega.
 
-Aprovação definitiva, criação/vínculos de campanhas, painel do mestre e descoberta das fichas do grupo pertencem à Parte 3. Regras de acesso por vínculo já protegem ajustes de fadiga e autorização de repetição. Um GM legítimo pode abrir a URL da ficha vinculada; não há cadastro fictício de campanha nem acesso universal de ADMIN.
+A Parte 3 integra aprovação definitiva, criação/vínculos de campanhas, painel do mestre e descoberta das fichas compartilhadas. Regras de acesso por vínculo protegem ajustes de fadiga e autorização de repetição. GM usa o editor da campanha; ADMIN sem vínculo não recebe acesso universal.
 
 Compartilhamento de rolagens em tempo real, transferência de itens, exportação e publicação continuam pendentes. As rolagens já são oficiais do servidor e persistem por ficha; acesso acompanha a autorização da ficha.
+
+
+## Integração da Parte 3
+
+Aprovação definitiva e solicitações de revisão agora são implementadas. A ficha tem seções Privacidade e notas e Solicitar alteração quando aplicável. GM usa editor/contexto próprio; campos PRIVATE não são enviados nem sobrescritos por vazios. Colegas recebem tela somente leitura baseada em DTO compartilhado, com autorização da campanha e do proprietário. Fluxos em CAMPANHAS.md, matriz em PERMISSOES.md e resultados em VALIDACAO.md. Upload continua prévia local até configurar storage externo.

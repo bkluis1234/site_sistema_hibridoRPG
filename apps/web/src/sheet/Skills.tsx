@@ -17,6 +17,9 @@ export function Skills({
   const [trained, setTrained] = useState(
     sheet.skills.filter((s) => s.trained).map((s) => s.key),
   );
+  const [reason, setReason] = useState("");
+  const locked = sheet.status !== "DRAFT" && !sheet.isGM;
+  const needsReason = sheet.status !== "DRAFT" && sheet.isGM;
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   useEffect(
@@ -88,7 +91,7 @@ export function Skills({
               checked={trained.includes(s.key)}
               disabled={
                 busy ||
-                sheet.status !== "DRAFT" ||
+                locked ||
                 (!trained.includes(s.key) && trained.length >= 4)
               }
               onChange={(e) =>
@@ -118,15 +121,36 @@ export function Skills({
           </div>
         ))}
       </div>
+      {needsReason && (
+        <label className="sheet-field">
+          <span>Justificativa mecânica do mestre</span>
+          <textarea
+            aria-label="Justificativa mecânica dos treinamentos"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            minLength={5}
+            maxLength={1000}
+          />
+        </label>
+      )}
       <div className="allocation-footer">
         <span>
           Treinadas: <strong>{trained.length}/4</strong>
         </span>
         <button
           className="button secondary"
-          disabled={busy || !dirty || sheet.status !== "DRAFT"}
+          disabled={
+            busy ||
+            !dirty ||
+            locked ||
+            (needsReason && (reason.trim().length < 5 || trained.length !== 4))
+          }
           onClick={() =>
-            act("/skills", { trained, version: sheet.skillsVersion })
+            act("/skills", {
+              trained,
+              version: sheet.skillsVersion,
+              ...(needsReason ? { reason } : {}),
+            })
           }
         >
           Salvar treinamentos

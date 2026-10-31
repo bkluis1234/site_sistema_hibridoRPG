@@ -1,10 +1,11 @@
+import { useSheetClient } from "./client";
 import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Save } from "lucide-react";
-import { api, ApiError } from "../api";
+import { ApiError } from "../api";
 import { ErrorBox } from "../components";
 import {
   identityFields,
@@ -32,7 +33,8 @@ export function Identification({
   onSaved: () => void;
   onRefetch: () => Promise<unknown>;
 }) {
-  const memoryKey = actorId + ":" + sheet.id;
+  const { api, gm } = useSheetClient();
+  const memoryKey = actorId + ":" + sheet.id + ":" + gm;
   const cached = draftMemory.get(memoryKey);
   const version = useRef(cached?.version ?? sheet.identityVersion);
   const pending = useRef<{
@@ -153,6 +155,12 @@ export function Identification({
         className="identity-form"
       >
         <fieldset disabled={sheet.status === "ARCHIVED"}>
+          {sheet.access.redactedFields.length > 0 && (
+            <p className="sheet-help">
+              Campos privados do proprietário não foram enviados; aparecem
+              vazios e não podem ser alterados neste contexto.
+            </p>
+          )}
           <div className="identity-grid">
             <InputField
               label="Nome do personagem"
@@ -221,7 +229,12 @@ export function Identification({
             label="Conceito e história"
             error={form.formState.errors.concept?.message}
           >
-            <textarea {...form.register("concept")} rows={3} maxLength={2000} />
+            <textarea
+              {...form.register("concept")}
+              readOnly={sheet.access.redactedFields.includes("concept")}
+              rows={3}
+              maxLength={2000}
+            />
           </InputField>
           <details className="narrative-details">
             <summary>Histórico, aparência e outros detalhes</summary>
@@ -242,6 +255,7 @@ export function Identification({
                 >
                   <textarea
                     {...form.register(key)}
+                    readOnly={sheet.access.redactedFields.includes(key)}
                     rows={4}
                     maxLength={key === "backstory" ? 12000 : 4000}
                   />

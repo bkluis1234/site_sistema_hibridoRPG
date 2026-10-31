@@ -79,8 +79,11 @@ export function Attributes({
 }) {
   const [values, setValues] = useState(sheet.attributes);
   useEffect(() => setValues(sheet.attributes), [sheet.attributesVersion]);
+  const [reason, setReason] = useState("");
+  const locked = sheet.status !== "DRAFT" && !sheet.isGM;
+  const needsReason = sheet.status !== "DRAFT" && sheet.isGM;
   const remaining = calculateAvailablePoints(values);
-  const error = validateAttributes(values);
+  const error = validateAttributes(values, sheet.status !== "DRAFT");
   const dirty = JSON.stringify(values) !== JSON.stringify(sheet.attributes);
   return (
     <>
@@ -97,10 +100,22 @@ export function Attributes({
               (values[k] > 1 ||
                 !ATTRIBUTE_KEYS.some((key) => values[key] === 0))
             }
-            disabled={busy || sheet.status !== "DRAFT"}
+            disabled={busy || locked}
           />
         ))}
       </div>
+      {needsReason && (
+        <label className="sheet-field">
+          <span>Justificativa mecânica do mestre</span>
+          <textarea
+            aria-label="Justificativa mecânica dos atributos"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            minLength={5}
+            maxLength={1000}
+          />
+        </label>
+      )}
       <div className="allocation-footer">
         <span>
           Pontos disponíveis: <strong>{remaining}</strong>
@@ -111,9 +126,16 @@ export function Attributes({
             act("/attributes", {
               version: sheet.attributesVersion,
               attributes: values,
+              ...(needsReason ? { reason } : {}),
             })
           }
-          disabled={busy || !dirty || !error.valid || sheet.status !== "DRAFT"}
+          disabled={
+            busy ||
+            !dirty ||
+            !error.valid ||
+            locked ||
+            (needsReason && reason.trim().length < 5)
+          }
         >
           Salvar atributos
         </button>

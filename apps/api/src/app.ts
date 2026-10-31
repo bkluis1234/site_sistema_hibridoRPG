@@ -31,6 +31,7 @@ import {
 import { HttpError } from "./errors.js";
 import { initializeSheet } from "./sheet-service.js";
 import { mountSheetRoutes } from "./sheet-routes.js";
+import { mountManagementRoutes } from "./management-routes.js";
 const unauthorized = () =>
   new HttpError(401, "UNAUTHENTICATED", "Entre na sua conta para continuar.");
 const characterSelect = {
@@ -231,6 +232,15 @@ export function createApp(db: PrismaClient, c: Config) {
           );
         privileged = true;
       }
+      const settings = await tx.platformSettings.findUnique({
+        where: { id: "global" },
+      });
+      if (settings && !settings.registrationOpen)
+        throw new HttpError(
+          403,
+          "REGISTRATION_CLOSED",
+          "O cadastro público está fechado.",
+        );
       const user = await tx.user.create({
         data: {
           username: input.username,
@@ -447,83 +457,7 @@ export function createApp(db: PrismaClient, c: Config) {
     });
     res.json({ character });
   });
-  app.get("/api/campaigns", auth, async (_req, res) =>
-    res.json({
-      campaigns: await db.campaign.findMany({
-        where: {
-          archivedAt: null,
-          members: { some: { userId: res.locals.user.id } },
-        },
-        select: { id: true, name: true, version: true },
-        take: 100,
-      }),
-    }),
-  );
-  app.get("/api/admin/gm-invites", auth, admin, async (_req, res) =>
-    res.json({
-      invites: await db.privilegeInvite.findMany({
-        select: {
-          id: true,
-          createdAt: true,
-          expiresAt: true,
-          usedAt: true,
-          revokedAt: true,
-        },
-        orderBy: { createdAt: "desc" },
-        take: 50,
-      }),
-    }),
-  );
-  app.post("/api/admin/gm-invites", auth, admin, async (req, res) => {
-    const input = z
-      .object({ expiresInHours: z.number().int().min(1).max(168) })
-      .strict()
-      .parse(req.body);
-    const code = randomToken();
-    const invite = await db.$transaction(async (tx) => {
-      const i = await tx.privilegeInvite.create({
-        data: {
-          createdById: res.locals.user.id,
-          codeHash: tokenHash(code),
-          expiresAt: new Date(Date.now() + input.expiresInHours * 3600_000),
-        },
-      });
-      await tx.adminAuditLog.create({
-        data: {
-          actorId: res.locals.user.id,
-          action: "GM_INVITE_CREATED",
-          targetId: i.id,
-        },
-      });
-      return i;
-    });
-    res
-      .status(201)
-      .json({ invite: { id: invite.id, expiresAt: invite.expiresAt }, code });
-  });
-  app.delete("/api/admin/gm-invites/:id", auth, admin, async (req, res) => {
-    const id = idSchema.parse(req.params.id);
-    await db.$transaction(async (tx) => {
-      const result = await tx.privilegeInvite.updateMany({
-        where: { id, usedAt: null, revokedAt: null },
-        data: { revokedAt: new Date() },
-      });
-      if (!result.count)
-        throw new HttpError(
-          409,
-          "INVITE_UNAVAILABLE",
-          "Convite inexistente ou indisponível.",
-        );
-      await tx.adminAuditLog.create({
-        data: {
-          actorId: res.locals.user.id,
-          action: "GM_INVITE_REVOKED",
-          targetId: id,
-        },
-      });
-    });
-    res.status(204).end();
-  });
+  mountManagementRoutes(app, db, auth, admin);
   mountSheetRoutes(app, db, auth, c.PORTRAIT_MAX_BYTES);
   app.use("/api", (_req, _res, next) =>
     next(new HttpError(404, "NOT_FOUND", "Rota não encontrada.")),

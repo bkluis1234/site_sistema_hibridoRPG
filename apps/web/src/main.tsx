@@ -80,6 +80,13 @@ import {
 } from "./components";
 import "./styles.css";
 import { CharacterSheet } from "./sheet/CharacterSheet";
+import { CampaignsPage } from "./management/Campaigns";
+import { CampaignDashboard } from "./management/CampaignDashboard";
+import { SharedCharacterView } from "./management/SharedCharacter";
+import { GMCharacterEditor } from "./management/GMCharacterEditor";
+import { AdminDashboard } from "./management/AdminDashboard";
+import { NotificationsBell } from "./management/Notifications";
+import "./management/management.css";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { retry: false, refetchOnWindowFocus: true },
@@ -95,6 +102,7 @@ function useMe() {
     queryKey: ["me"],
     queryFn: () => api<{ user: PublicUser }>("/auth/me"),
     staleTime: 60_000,
+    refetchInterval: 30000,
   });
 }
 function Brand() {
@@ -309,6 +317,10 @@ function Login() {
   );
 }
 function Register() {
+  const registration = useQuery({
+    queryKey: ["public-settings"],
+    queryFn: () => api<{ registrationOpen: boolean }>("/settings/public"),
+  });
   const navigate = useNavigate();
   const qc = useQueryClient();
   const recovery = useContext(RecoveryContext);
@@ -341,6 +353,11 @@ function Register() {
         <p className="muted">
           Crie seu acesso. O resto da história é com você.
         </p>
+        {registration.data?.registrationOpen === false && (
+          <p role="alert" className="error-box">
+            O cadastro público está fechado pelo administrador.
+          </p>
+        )}
         <form onSubmit={f.handleSubmit((v) => mutation.mutate(v))}>
           <Field
             label="Nome de usuário"
@@ -392,7 +409,13 @@ function Register() {
             />
           </Field>
           <ErrorBox error={mutation.error} />
-          <button className="button primary wide" disabled={mutation.isPending}>
+          <button
+            className="button primary wide"
+            disabled={
+              mutation.isPending ||
+              registration.data?.registrationOpen === false
+            }
+          >
             {mutation.isPending ? "Criando registro…" : "Criar minha conta"}
             <ArrowRight size={17} />
           </button>
@@ -683,6 +706,7 @@ function Shell() {
           <span>
             <span className="live-dot" /> ARQUIVO DE SOBREVIVENTES
           </span>
+          <NotificationsBell />
           <span className="topbar-version">
             SISTEMA HÍBRIDO <b>2.6</b>
           </span>
@@ -857,7 +881,7 @@ function Dashboard() {
       ) : campaigns.data?.campaigns.length ? (
         <div className="character-grid">
           {campaigns.data.campaigns.map((c) => (
-            <CampaignCard key={c.id} name={c.name} />
+            <CampaignCard key={c.id} name={c.name} id={c.id} />
           ))}
         </div>
       ) : (
@@ -876,45 +900,6 @@ function Dashboard() {
               </div>
               <span className="tag neutral">EM PREPARAÇÃO</span>
             </div>
-          </HorrorPanel>
-        )
-      )}
-    </>
-  );
-}
-function Campaigns() {
-  const query = useQuery({
-    queryKey: ["campaigns"],
-    queryFn: () =>
-      api<{ campaigns: { id: string; name: string }[] }>("/campaigns"),
-  });
-  return (
-    <>
-      <div className="page-heading">
-        <div>
-          <span className="eyebrow">HISTÓRIAS COMPARTILHADAS</span>
-          <h1>
-            Campanhas<span>.</span>
-          </h1>
-          <p>O ponto de encontro entre mestre e jogadores.</p>
-        </div>
-      </div>
-      <ErrorBox error={query.error} />
-      {query.isPending ? (
-        <Loading />
-      ) : query.data?.campaigns.length ? (
-        <div className="character-grid">
-          {query.data.campaigns.map((c) => (
-            <CampaignCard key={c.id} name={c.name} />
-          ))}
-        </div>
-      ) : (
-        !query.error && (
-          <HorrorPanel>
-            <EmptyState title="O grupo ainda está se reunindo.">
-              Criação de campanhas, convites de jogadores e permissões por
-              campanha serão habilitados na etapa 3.
-            </EmptyState>
           </HorrorPanel>
         )
       )}
@@ -973,106 +958,6 @@ type Invite = {
   usedAt: string | null;
   revokedAt: string | null;
 };
-function Admin() {
-  const me = useMe();
-  const [code, setCode] = useState("");
-  const qc = useQueryClient();
-  const query = useQuery({
-    queryKey: ["gm-invites"],
-    queryFn: () => api<{ invites: Invite[] }>("/admin/gm-invites"),
-    enabled: me.data?.user.role === "ADMIN",
-  });
-  const create = useMutation({
-    mutationFn: () =>
-      api<{ code: string }>("/admin/gm-invites", {
-        method: "POST",
-        body: JSON.stringify({ expiresInHours: 24 }),
-      }),
-    onSuccess: (data) => {
-      setCode(data.code);
-      qc.invalidateQueries({ queryKey: ["gm-invites"] });
-    },
-  });
-  const revoke = useMutation({
-    mutationFn: (id: string) =>
-      api("/admin/gm-invites/" + id, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["gm-invites"] }),
-  });
-  if (me.data?.user.role !== "ADMIN") return <Navigate to="/" replace />;
-  return (
-    <>
-      <div className="page-heading">
-        <div>
-          <span className="eyebrow">ACESSO RESTRITO</span>
-          <h1>
-            Administração<span>.</span>
-          </h1>
-          <p>Convites temporários para habilitar novos mestres.</p>
-        </div>
-      </div>
-      <HorrorPanel>
-        <SectionHeader title="Convites de mestre" />
-        <p className="muted">
-          Uso único. Validade de 24 horas. Concedem permissão para criar
-          campanhas; o papel de mestre pertence a cada campanha.
-        </p>
-        <button
-          className="button primary"
-          disabled={create.isPending}
-          onClick={() => create.mutate()}
-        >
-          <Plus size={16} />
-          {create.isPending ? "Gerando…" : "Gerar convite"}
-        </button>
-        <ErrorBox error={create.error} />
-        {code && (
-          <div className="invite-code" role="status">
-            <p>
-              Copie agora e entregue em particular. O código não será exibido
-              novamente após sair desta tela.
-            </p>
-            <code>{code}</code>
-            <button className="button secondary" onClick={() => setCode("")}>
-              Ocultar código
-            </button>
-          </div>
-        )}
-        <ErrorBox error={query.error} />
-        <ErrorBox error={revoke.error} />
-        <div className="invite-list">
-          {query.data?.invites.map((i) => (
-            <div className="invite-row" key={i.id}>
-              <div>
-                <strong>Convite {i.id.slice(0, 8)}</strong>
-                <small>
-                  Expira {new Date(i.expiresAt).toLocaleString("pt-BR")}
-                </small>
-              </div>
-              <span className="tag neutral">
-                {i.usedAt
-                  ? "Utilizado"
-                  : i.revokedAt
-                    ? "Revogado"
-                    : new Date(i.expiresAt) < new Date()
-                      ? "Expirado"
-                      : "Disponível"}
-              </span>
-              {!i.usedAt && !i.revokedAt && (
-                <button
-                  className="button secondary"
-                  disabled={revoke.isPending}
-                  onClick={() => revoke.mutate(i.id)}
-                >
-                  Revogar
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      </HorrorPanel>
-    </>
-  );
-}
 function App() {
   const [codes, setCodes] = useState<string[]>([]);
   return (
@@ -1085,9 +970,19 @@ function App() {
         <Route element={<Shell />}>
           <Route index element={<Dashboard />} />
           <Route path="characters/:id" element={<CharacterSheet />} />
-          <Route path="campaigns" element={<Campaigns />} />
+          <Route path="campaigns" element={<CampaignsPage />} />
+          <Route path="campaigns/:id" element={<CampaignDashboard />} />
+          <Route path="campaigns/:id/gm" element={<CampaignDashboard />} />
+          <Route
+            path="campaigns/:campaignId/gm/characters/:id"
+            element={<GMCharacterEditor />}
+          />
+          <Route
+            path="campaigns/:campaignId/characters/:id"
+            element={<SharedCharacterView />}
+          />
           <Route path="profile" element={<Profile />} />
-          <Route path="admin" element={<Admin />} />
+          <Route path="admin" element={<AdminDashboard />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

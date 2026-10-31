@@ -22,6 +22,7 @@ export const identityFields = {
 export const identitySchema = versionedSchema.extend(identityFields).strict();
 export const attributesSchema = versionedSchema
   .extend({
+    reason: z.string().trim().min(5).max(1000).optional(),
     attributes: z
       .object({
         AGI: z.number().int().min(0).max(3),
@@ -35,6 +36,7 @@ export const attributesSchema = versionedSchema
   .strict();
 export const skillsSchema = versionedSchema
   .extend({
+    reason: z.string().trim().min(5).max(1000).optional(),
     trained: z
       .array(
         z.enum(
@@ -138,6 +140,8 @@ export type SheetDetails = {
   skillsVersion: number;
   rulesVersion: string;
   isGM: boolean;
+  access: { isOwner: boolean; gmContext: boolean; redactedFields: string[] };
+  sharing: { enabled: boolean; publicFields: string[]; version: number };
   identity: IdentityFields;
   attributes: Record<(typeof ATTRIBUTE_KEYS)[number], number>;
   resources: {
@@ -199,6 +203,7 @@ export type RollView = {
   createdAt: string;
 };
 export type HistoryEntry = {
+  reason?: string | null;
   id: string;
   action: string;
   actor: { username: string };

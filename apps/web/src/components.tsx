@@ -98,13 +98,15 @@ export function CharacterCard({ character }: { character: CharacterSummary }) {
     </Link>
   );
 }
-export function CampaignCard({ name }: { name: string }) {
+export function CampaignCard({ name, id }: { name: string; id?: string }) {
   return (
-    <HorrorPanel>
-      <span className="eyebrow">Campanha</span>
-      <h3>{name}</h3>
-      <p>Vínculo registrado no servidor.</p>
-    </HorrorPanel>
+    <Link to={id ? "/campaigns/" + id : "/campaigns"}>
+      <HorrorPanel>
+        <span className="eyebrow">Campanha</span>
+        <h3>{name}</h3>
+        <p>Abrir campanha e consultar seu vínculo.</p>
+      </HorrorPanel>
+    </Link>
   );
 }
 export function ResourceBar({

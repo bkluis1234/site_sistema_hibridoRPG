@@ -1,8 +1,8 @@
 # Sistema Híbrido 2.6
 
-Plataforma real de fichas da campanha de Marcus. Parte 1 preservada; Parte 2 implementa identificação com autosave, atributos, recursos, 21 perícias, inventário/equipamentos, condições, ferimentos, rolagens do servidor, decisões de PE e histórico, com persistência MySQL e controle de conflitos.
+Plataforma real de fichas da campanha de Marcus. Versão 0.3.0: fundação e ficha digital preservadas; campanhas, convites de jogadores, painel do mestre, aprovação mecânica, compartilhamento filtrado e administração integrados com persistência MySQL e controle de conflitos. A auditoria das Partes 1/2 foi executada antes da ampliação (docs/AUDITORIA_PARTES_1_2.md).
 
-A imagem oficial e as regras explícitas da Parte 2 foram utilizadas. O manual completo continua pendente de conferência. **Upload persistente de retrato, aprovação definitiva/painel de campanhas e publicação ainda não estão concluídos.** O seletor de imagem mostra apenas prévia local até configurar storage externo.
+A imagem oficial e as regras explícitas da Parte 2 foram utilizadas. O manual completo continua pendente de conferência. **Upload persistente de imagens e publicação ainda não estão concluídos.** O seletor de imagem mostra apenas prévia local até configurar storage externo.
 
 ## Tecnologias e organização
 
@@ -29,7 +29,7 @@ docs                 Requisitos, decisões, operação e progresso
 7. Execute `npm run dev`. Frontend: http://localhost:5173. API: http://localhost:3000/api/health. Vite encaminha `/api` para o Express. Abra sempre pelo frontend.
 8. Para a primeira conta administrativa, execute `npm run admin:create` num terminal interativo seguro do servidor. A senha tem entrada oculta; códigos de recuperação aparecem apenas ao concluir. Não informe senhas por argumento de comando.
 
-O diretório de trabalho deve ser a raiz do monorepositório. O cadastro normal já funciona sem administrador. Para habilitar Marcus como mestre, o ADMIN gera um convite no painel e Marcus o utiliza no cadastro. Isso habilita a futura criação de campanhas; não concede poder global nem acesso a fichas alheias. Convites para contas já existentes serão tratados em etapa posterior.
+O diretório de trabalho deve ser a raiz do monorepositório. O cadastro normal já funciona sem administrador. Para habilitar Marcus como mestre, o ADMIN gera um convite no painel e Marcus o utiliza no cadastro. Isso habilita a criação de campanhas; não concede poder global nem acesso a fichas alheias. Para Marcus já cadastrado, ADMIN pode habilitar a criação em Usuários, com reautenticação. O criador torna-se GM da campanha criada. O painel também administra usuários, papéis, configurações e auditoria; conceder ADMIN exige senha e código de recuperação de uso único. Consulte docs/ADMINISTRACAO.md.
 
 ## Comandos
 
@@ -52,12 +52,16 @@ O diretório de trabalho deve ser a raiz do monorepositório. O cadastro normal 
 
 ## Testar com MySQL
 
-Copie `.env.test.example` para `.env.test` e preencha com `NODE_ENV=test`, DATABASE_URL apontando para um banco **dedicado** cujo nome termine em `_test`, APP_ORIGIN=http://localhost:5173 e CSRF_SECRET aleatório. Nunca use banco de jogadores nos testes. Os testes de integração apagam somente seus registros `it_*`; o E2E deixa registros sintéticos `e2e_*` no banco descartável. A guarda impede rodar em nomes sem `_test`, mas não substitui conferir host e credenciais.
+Copie `.env.test.example` para `.env.test` e preencha com `NODE_ENV=test`, DATABASE_URL apontando para um banco **dedicado** cujo nome termine em `_test`, APP_ORIGIN=http://localhost:5173 e CSRF_SECRET aleatório. Nunca use banco de jogadores nos testes. Os testes de integração apagam somente seus registros `it_*`; os testes novos de campanha também removem seus registros sintéticos `c3_*`/`e3_*`; os E2E anteriores deixam registros `e2e_*` no banco descartável. A guarda impede rodar em nomes sem `_test`, mas não substitui conferir host e credenciais.
 
-Aplique primeiro a migração no banco de teste com `npm run db:test:deploy`, que carrega `.env.test` e valida a guarda de ambiente antes de chamar o Prisma. Não copie credenciais de produção. `npm exec -- playwright install chromium` instala o navegador necessário (sistemas Linux podem precisar das dependências nativas do Playwright). Em seguida execute integração e E2E. O runner executa cada perfil (desktop/mobile) com servidores novos, isolando o limite real de tentativas por IP entre dispositivos simulados. Não desativa a proteção da API. Os relatórios ficam em subpastas por perfil de test-results e playwright-report.
+Aplique primeiro a migração no banco de teste com `npm run db:test:deploy`, que carrega `.env.test` e valida a guarda de ambiente antes de chamar o Prisma. Não copie credenciais de produção. `npm exec -- playwright install chromium` instala o navegador necessário (sistemas Linux podem precisar das dependências nativas do Playwright). Em seguida execute integração e E2E. O runner executa cada arquivo e perfil (desktop/mobile) com servidores novos, isolando o limite real de tentativas por IP entre dispositivos simulados. Não desativa a proteção da API. Os relatórios ficam em subpastas por arquivo/perfil de test-results e playwright-report. A regressão registrada da versão 0.3.0 tem 51 testes unitários, 60 de integração e 14 E2E aprovados; detalhes e limites em docs/VALIDACAO.md.
 
 ## Continuidade e publicação
 
+- [Campanhas e fluxo do grupo](docs/CAMPANHAS.md)
+- [Permissões e privacidade](docs/PERMISSOES.md)
+- [Administração reforçada](docs/ADMINISTRACAO.md)
+- [Auditoria obrigatória das Partes 1/2](docs/AUDITORIA_PARTES_1_2.md)
 - [Progresso e próximos passos](docs/PROGRESSO.md)
 - [Requisitos RF, RNF e RN](docs/REQUISITOS.md)
 - [Arquitetura e limites de segurança](docs/ARQUITETURA.md)

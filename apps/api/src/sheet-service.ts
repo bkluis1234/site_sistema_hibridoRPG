@@ -81,6 +81,12 @@ export async function authorized(
   actorId: string,
   write = false,
 ) {
+  const actor = await tx.user.findUnique({
+    where: { id: actorId },
+    select: { disabledAt: true },
+  });
+  if (!actor || actor.disabledAt)
+    throw new HttpError(401, "UNAUTHENTICATED", "A conta não está disponível.");
   const character = await tx.character.findUnique({ where: { id } });
   if (!character)
     throw new HttpError(404, "NOT_FOUND", "Ficha não encontrada.");
@@ -90,12 +96,25 @@ export async function authorized(
           campaignId: character.campaignId,
           userId: actorId,
           role: "GM",
-          campaign: { archivedAt: null },
+          status: "ACTIVE",
+          user: { disabledAt: null },
         },
       })
     : null;
   if (character.ownerId !== actorId && !gm)
     throw new HttpError(404, "NOT_FOUND", "Ficha não encontrada.");
+  if (write && character.ownerId !== actorId && character.campaignId) {
+    const campaign = await tx.campaign.findUnique({
+      where: { id: character.campaignId },
+      select: { status: true, archivedAt: true },
+    });
+    if (campaign?.status === "ARCHIVED" || campaign?.archivedAt)
+      throw new HttpError(
+        409,
+        "CAMPAIGN_ARCHIVED",
+        "A campanha está arquivada.",
+      );
+  }
   if (write && (character.status === "ARCHIVED" || character.archivedAt))
     throw new HttpError(409, "ARCHIVED", "Ficha arquivada: somente consulta.");
   try {
@@ -107,7 +126,11 @@ export async function authorized(
       "Esta versão da ficha exige um módulo de regras compatível.",
     );
   }
-  return { character, isGM: Boolean(gm) };
+  return {
+    character,
+    isGM: Boolean(gm),
+    isOwner: character.ownerId === actorId,
+  };
 }
 function attrs(rows: { key: string; value: number }[]): Attributes {
   const a = { ...DEFAULT_ATTRIBUTES };
@@ -130,6 +153,10 @@ export async function audit(
   action: string,
   before?: unknown,
   after?: unknown,
+  options: {
+    visibility?: "PUBLIC" | "PRIVATE" | "GM_ONLY";
+    reason?: string;
+  } = {},
 ) {
   const c = await tx.character.update({
     where: { id },
@@ -141,6 +168,11 @@ export async function audit(
       actorId,
       action,
       recordVersion: c.version,
+      visibility:
+        options.visibility ??
+        (action === "IDENTITY_UPDATED" ? "PRIVATE" : "PUBLIC"),
+      campaignScopeId: options.visibility === "GM_ONLY" ? c.campaignId : null,
+      reason: options.reason,
       ...(before === undefined ? {} : { beforeData: json(before) }),
       ...(after === undefined ? {} : { afterData: json(after) }),
     },
@@ -200,6 +232,7 @@ export async function getSheet(
   id: string,
   actorId: string,
   portraitMaxBytes = 5242880,
+  gmContext = false,
 ): Promise<SheetDetails> {
   return db.$transaction(async (tx) => {
     const access = await authorized(tx, id, actorId);
@@ -231,7 +264,7 @@ export async function getSheet(
       damage: i.damage,
       version: i.version,
     }));
-    return {
+    const result: SheetDetails = {
       id: c.id,
       name: c.name,
       status: c.status,
@@ -240,7 +273,19 @@ export async function getSheet(
       attributesVersion: c.attributesVersion,
       skillsVersion: c.skillsVersion,
       rulesVersion: c.rulesVersion,
-      isGM: access.isGM,
+      isGM: access.isGM && gmContext,
+      access: {
+        isOwner: access.isOwner,
+        gmContext: access.isGM && gmContext,
+        redactedFields: [],
+      },
+      sharing: {
+        enabled: c.sharingEnabled,
+        publicFields: Array.isArray(c.publicFields)
+          ? c.publicFields.filter((x): x is string => typeof x === "string")
+          : [],
+        version: c.sharingVersion,
+      },
       identity: {
         name: c.name,
         concept: c.concept,
@@ -323,6 +368,27 @@ export async function getSheet(
         mimeTypes: ["image/png", "image/jpeg", "image/webp"],
       },
     };
+    if (!access.isOwner) {
+      const publicFields = Array.isArray(c.publicFields) ? c.publicFields : [];
+      for (const field of [
+        "concept",
+        "backstory",
+        "appearance",
+        "personality",
+        "objectives",
+        "personalNotes",
+      ] as const) {
+        if (field === "personalNotes" || !publicFields.includes(field)) {
+          result.identity[field] = "";
+          result.access.redactedFields.push(field);
+        }
+      }
+      result.inventory = result.inventory.map((item) => ({
+        ...item,
+        notes: "",
+      }));
+    }
+    return result;
   });
 }
 const assertVersion = (current: number, submitted: number) => {
@@ -344,7 +410,29 @@ export async function saveIdentity(
 ) {
   const before = await tx.character.findUniqueOrThrow({ where: { id } });
   assertVersion(before.identityVersion, input.version);
-  const { version, operationId, ...data } = input;
+  const { version, operationId, ...submitted } = input;
+  const fields = Array.isArray(before.publicFields) ? before.publicFields : [];
+  const blocked =
+    before.ownerId === actorId
+      ? []
+      : [
+          "concept",
+          "backstory",
+          "appearance",
+          "personality",
+          "objectives",
+          "personalNotes",
+        ].filter((k) => k === "personalNotes" || !fields.includes(k));
+  for (const k of blocked)
+    if ((submitted as Record<string, unknown>)[k])
+      throw new HttpError(
+        403,
+        "PRIVATE_FIELD",
+        "Este campo pertence à área privada do proprietário.",
+      );
+  const data = Object.fromEntries(
+    Object.entries(submitted).filter(([k]) => !blocked.includes(k)),
+  );
   const c = await tx.character.update({
     where: { id },
     data: { ...data, identityVersion: { increment: 1 } },
@@ -358,6 +446,7 @@ export async function saveIdentity(
       Object.keys(data).map((k) => [k, before[k as keyof typeof before]]),
     ),
     data,
+    { visibility: before.ownerId === actorId ? "PRIVATE" : "PUBLIC" },
   );
   return { identityVersion: c.identityVersion };
 }
@@ -371,9 +460,11 @@ export async function saveAttributes(
     where: { id },
     include: { attributes: true, resources: true },
   });
-  assertDraft(c.status);
+  const access = await authorized(tx, id, actorId, true);
+  if (c.status !== "DRAFT" && (!access.isGM || !input.reason))
+    assertDraft(c.status);
   assertVersion(c.attributesVersion, input.version);
-  const valid = validateAttributes(input.attributes);
+  const valid = validateAttributes(input.attributes, c.status !== "DRAFT");
   if (!valid.valid)
     throw new HttpError(400, "ATTRIBUTES_INVALID", valid.errors.join(" "));
   const before = attrs(c.attributes),
@@ -417,6 +508,7 @@ export async function saveAttributes(
       maxima: max,
       resourceAdjustments: adjustments,
     },
+    { reason: input.reason },
   );
   return {
     attributesVersion: updated.attributesVersion,
@@ -433,9 +525,11 @@ export async function saveSkills(
     where: { id },
     include: { skills: true },
   });
-  assertDraft(c.status);
+  const access = await authorized(tx, id, actorId, true);
+  if (c.status !== "DRAFT" && (!access.isGM || !input.reason))
+    assertDraft(c.status);
   assertVersion(c.skillsVersion, input.version);
-  if (!validateTrainedSkills(input.trained).valid)
+  if (!validateTrainedSkills(input.trained, c.status !== "DRAFT").valid)
     throw new HttpError(
       400,
       "SKILLS_INVALID",
@@ -457,6 +551,7 @@ export async function saveSkills(
     "TRAINING_UPDATED",
     c.skills.filter((s) => s.trained).map((s) => s.key),
     input.trained,
+    { reason: input.reason },
   );
   return { skillsVersion: updated.skillsVersion };
 }
@@ -561,6 +656,7 @@ export async function saveItem(
     | z.infer<typeof inventoryUpdateSchema>,
   itemId?: string,
 ) {
+  const access = await authorized(tx, id, actorId, true);
   let before: unknown = undefined;
   if (itemId) {
     const item = await tx.inventoryItem.findFirst({
@@ -575,6 +671,17 @@ export async function saveItem(
     z.infer<typeof inventoryUpdateSchema>,
     "operationId"
   >;
+  if (!access.isOwner) {
+    if (data.notes)
+      throw new HttpError(
+        403,
+        "PRIVATE_FIELD",
+        "As observações do item são privadas do proprietário.",
+      );
+    data.notes = itemId
+      ? ((before as { notes: string | null }).notes ?? "")
+      : "";
+  }
   if (!data.equipment && (data.type || data.damage))
     throw new HttpError(
       400,
@@ -833,6 +940,24 @@ export async function submitSheet(
     { status: c.status },
     { status },
   );
+  if (!reopen && c.campaignId) {
+    const masters = await tx.campaignMember.findMany({
+      where: {
+        campaignId: c.campaignId,
+        role: "GM",
+        status: "ACTIVE",
+        user: { disabledAt: null },
+      },
+      select: { userId: true },
+    });
+    await tx.notification.createMany({
+      data: masters.map((m) => ({
+        userId: m.userId,
+        message: "Há uma ficha aguardando aprovação.",
+        linkPath: "/campaigns/" + c.campaignId + "/gm",
+      })),
+    });
+  }
   return { status };
 }
 export async function createRoll(
@@ -981,8 +1106,8 @@ export async function effort(
             campaignId: c.campaignId,
             userId: roll.retryAuthorizedById,
             role: "GM",
+            status: "ACTIVE",
             user: { disabledAt: null },
-            campaign: { archivedAt: null },
           },
         })
       : null;

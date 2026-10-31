@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { Link, useParams, useOutletContext } from "react-router";
+import {
+  Link,
+  useParams,
+  useOutletContext,
+  useSearchParams,
+} from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -15,7 +20,8 @@ import {
   FileText,
   Crosshair,
 } from "lucide-react";
-import { api } from "../api";
+import { useSheetClient } from "./client";
+import { PrivacyPanel, ChangeRequestPanel } from "./Privacy";
 import { ErrorBox, SaveStatus } from "../components";
 import {
   type SheetDetails,
@@ -36,10 +42,26 @@ import { operationId } from "./types";
 import "./sheet.css";
 const op = operationId;
 export function CharacterSheet() {
+  const { api, gm } = useSheetClient();
+  const [searchParams] = useSearchParams();
   const { id } = useParams();
   const { user } = useOutletContext<{ user: PublicUser }>();
   const qc = useQueryClient();
-  const [tab, setTab] = useState("summary");
+  const [tab, setTab] = useState(
+    [
+      "attributes",
+      "skills",
+      "inventory",
+      "equipment",
+      "conditions",
+      "dice",
+      "history",
+      "privacy",
+      "requests",
+    ].includes(searchParams.get("section") ?? "")
+      ? searchParams.get("section")!
+      : "summary",
+  );
   const [saveState, setSaveState] = useState<
     "idle" | "dirty" | "saving" | "saved" | "error" | "conflict"
   >("idle");
@@ -49,11 +71,11 @@ export function CharacterSheet() {
     "DEFAULT" | "YES" | "NO"
   >("DEFAULT");
   const query = useQuery({
-    queryKey: ["sheet", id],
+    queryKey: ["sheet", id, gm],
     queryFn: () => api<{ sheet: SheetDetails }>("/characters/" + id + "/sheet"),
   });
   const rolls = useQuery({
-    queryKey: ["sheet-rolls", id],
+    queryKey: ["sheet-rolls", id, gm],
     enabled: tab === "dice",
     queryFn: () => api<{ rolls: RollView[] }>("/characters/" + id + "/rolls"),
   });
@@ -63,6 +85,8 @@ export function CharacterSheet() {
       qc.invalidateQueries({ queryKey: ["characters"] }),
       qc.invalidateQueries({ queryKey: ["sheet-history", id] }),
       qc.invalidateQueries({ queryKey: ["sheet-rolls", id] }),
+      qc.invalidateQueries({ queryKey: ["character-notes", id] }),
+      qc.invalidateQueries({ queryKey: ["change-requests", id] }),
     ]);
   };
   const mutation = useMutation({
@@ -231,6 +255,10 @@ export function CharacterSheet() {
           ["conditions", "Condições", HeartPulse],
           ["dice", "Rolagens", Dices],
           ["history", "Histórico", History],
+          ["privacy", "Privacidade e notas", ShieldCheck],
+          ...(s.access.isOwner && s.status === "APPROVED"
+            ? [["requests", "Solicitar alteração", FileText]]
+            : []),
         ].map(([key, label, Icon]) => (
           <button
             key={key as string}
@@ -314,6 +342,10 @@ export function CharacterSheet() {
             </button>
           </div>
         </div>
+      )}
+      {tab === "privacy" && <PrivacyPanel sheet={s} act={act} busy={busy} />}
+      {tab === "requests" && s.access.isOwner && s.status === "APPROVED" && (
+        <ChangeRequestPanel sheet={s} act={act} busy={busy} />
       )}
       <div className="sheet-grid" data-tab={tab}>
         <div

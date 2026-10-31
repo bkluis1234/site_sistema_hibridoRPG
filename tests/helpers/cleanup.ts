@@ -11,6 +11,29 @@ export async function cleanupUsers(db: PrismaClient, names: string[]) {
   });
   const characterIds = chars.map((c) => c.id);
   const where = { characterId: { in: characterIds } };
+  const ownedCampaigns = await db.campaign.findMany({
+    where: { ownerId: { in: ids } },
+    select: { id: true },
+  });
+  const campaignIds = ownedCampaigns.map((c) => c.id);
+  await db.adminAuthorization.deleteMany({ where: { userId: { in: ids } } });
+  await db.managementOperation.deleteMany({ where: { actorId: { in: ids } } });
+  await db.notification.deleteMany({ where: { userId: { in: ids } } });
+  await db.characterNote.deleteMany({
+    where: {
+      OR: [
+        where,
+        { authorId: { in: ids } },
+        { campaignId: { in: campaignIds } },
+      ],
+    },
+  });
+  await db.campaignAuditLog.deleteMany({
+    where: {
+      OR: [{ campaignId: { in: campaignIds } }, { actorId: { in: ids } }],
+    },
+  });
+
   await db.diceRoll.deleteMany({
     where: {
       OR: [

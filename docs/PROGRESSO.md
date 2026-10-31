@@ -1,6 +1,6 @@
 # Progresso — Sistema Híbrido 2.6
 
-Atualizado em 30/10/2026. Versão da aplicação: 0.2.0. Fundação preservada e núcleo da ficha da Parte 2 implementado. Referências: imagem oficial e texto explícito da Parte 2; Manual completo ainda pendente. Sem publicação em produção ou repositório remoto configurado.
+Atualizado em 30/10/2026. Versão da aplicação: 0.3.0. Fundação/ficha auditadas antes da Parte 3; gestão multiusuário integrada. Referências: imagem oficial e texto explícito da Parte 2; Manual completo ainda pendente. Sem publicação em produção ou repositório remoto configurado.
 
 ## Arquitetura adotada
 
@@ -30,11 +30,14 @@ Ficha usa versões independentes para identificação, atributos, treinamentos e
 - 202610300001_foundation: fundação da Parte 1, reparada em teste conforme histórico em VALIDACAO.md.
 - 202610300002_interactive_sheet: aplicada com sucesso no MySQL local hibrido_test; completa narrativas, versões, dados estruturados de condições, rolagens, idempotência, espaços/equipamentos e auditoria. Preenche fichas anteriores e remove máximo redundante dos recursos. Status atualizado e migrate diff sem diferenças.
 
-Nenhuma migração executada em produção. Ensaio de instalação inteiramente limpa e de restauração continua necessário em staging antes de publicar.
+- 202610310003_campaign_management: aplicada ao MySQL de teste existente, preservando dados. Acrescenta estados, convites limitados, notas com escopo, privacidade, solicitações, auditoria, notificações, provas administrativas e configurações. CHECK/FK de notas corrigido e migração local recuperada sem reset; detalhes em VALIDACAO.md. Status atualizado e diff sem diferenças.
+- As três migrações SQL passaram desde vazio em instância MySQL isolada (27 tabelas), sem tocar no datadir principal. Ensaio não executa ledger Prisma.
+
+Nenhuma migração executada em produção. Ensaiar prisma migrate deploy em staging vazio e restauração antes de publicar.
 
 ## Dependências e comandos
 
-Não foram acrescentadas dependências runtime nesta etapa. Mantidas versões do lockfile: Node 24, React 19.3.1, Vite 8.3.5, TypeScript 5.9.3, Express 5.3.0, Prisma 7.10.1, Zod 4.6.7, Tailwind 4.3.3, Vitest 4.1.12, Supertest 7.3.1, Playwright 1.64.1 e demais bibliotecas aprovadas. Formatação realizada por Prettier temporário, sem dependência nova no projeto.
+Não foram acrescentadas dependências runtime nas Partes 2/3. Mantidas versões do lockfile: Node 24, React 19.3.1, Vite 8.3.5, TypeScript 5.9.3, Express 5.3.0, Prisma 7.10.1, Zod 4.6.7, Tailwind 4.3.3, Vitest 4.1.12, Supertest 7.3.1, Playwright 1.64.1 e demais bibliotecas aprovadas. Formatação realizada por Prettier temporário, sem dependência nova no projeto.
 
 ```sh
 npm ci
@@ -44,29 +47,49 @@ npm run db:deploy
 npm run dev
 ```
 
-Testes: criar .env.test por .env.test.example e usar banco dedicado terminado _test. Executar `npm run db:test:deploy`, `npm test`, `npm run test:integration`. Instalar Chromium e executar `npm run test:e2e`. O runner E2E executa desktop/mobile com processos distintos para não somar tentativas de perfis simulados no mesmo limite por IP. A proteção real da API não foi desativada. Relatórios por perfil ficam ignorados em test-results e playwright-report.
+Testes: criar .env.test por .env.test.example e usar banco dedicado terminado _test. Executar `npm run db:test:deploy`, `npm test`, `npm run test:integration`. Instalar Chromium e executar `npm run test:e2e`. O runner E2E executa cada arquivo e perfil desktop/mobile com processos distintos para não somar tentativas de perfis simulados no mesmo limite por IP. A proteção real da API não foi desativada. Relatórios por perfil ficam ignorados em test-results e playwright-report.
 
 Neste cloud, o Chromium headless está em /workspace/.cache/ms-playwright; foi usado PLAYWRIGHT_BROWSERS_PATH nesse caminho. No PC, instalar normalmente pelo Playwright. Comandos completos no README. ADMIN de produção não existe; credenciais criadas aqui são exclusivamente sintéticas do banco de teste.
 
 ## Validação
 
-Regras, sessões/CSRF e contratos têm 51 testes unitários. 39 casos de integração MySQL aprovados (38 na suíte completa e um adicional de precisão), cobrindo persistência, concorrência, isolamento, carga, crítico, fadiga configurável e decisões PE; relatório em VALIDACAO.md. Playwright executou cinco cenários em desktop e cinco em celular, todos aprovados, incluindo fluxo completo e inicialização CSRF compartilhada por autosave/recurso simultâneos. Build, TypeScript e schema Prisma passaram.
+Regressão final: 51 unitários, 60 integrações MySQL e 14 E2E desktop/mobile aprovados (125 casos). TypeScript, build, schema Prisma, três migrações/status e diff passaram. Auditoria contínua comprovou persistência após reiniciar MySQL e API antes da Parte 3. SQL de instalação vazia aprovado separadamente. Falhas intermediárias/correções e limites em VALIDACAO.md; evidências prévias em AUDITORIA_PARTES_1_2.md.
+
+## Funcionalidades acrescentadas na Parte 3
+
+- Campanhas Híbrido 2.6 com estados, descrição/avisos/compartilhamento; criação habilitada e GM por vínculo, sem recriar autenticação ou regras.
+- Convites aleatórios, hash-only, validade/limite/revogação, ingresso PENDING e aceite GM; remoção/vínculos preservam contas e personagens.
+- Painel GM com elenco, fichas, recursos atuais/máximos, condições, pedidos, convites, histórico/configurações e notas reservadas; editor com justificativa mecânica auditada.
+- Compartilhamento somente leitura com dupla autorização; notas PUBLIC/PRIVATE/GM_ONLY filtradas no servidor, histórico sanitizado e segredos presos à campanha de origem.
+- Aprovação inicial/correção e solicitações de atributos/treinamentos com comentários, versão base e aplicação transacional; conflito impede sobrescrita silenciosa.
+- Administração de usuários/papéis/estados/configurações/convites/logs, senha recente e prova de uso único; promoção ADMIN exige código de recuperação e confirmação do destino. ADMIN conserva ficha própria.
+- Notificações internas e polling 30 s/refetch/invalidação; idempotência de gestão sem guardar códigos secretos.
+- Documentos CAMPANHAS.md, PERMISSOES.md, ADMINISTRACAO.md, auditoria obrigatória e referência integral da Parte 3.
 
 ## Pendências e limitações
 
 1. Storage externo persistente de retrato: UI é prévia local; não salva imagem no banco ou no disco temporário do Render. Configurar provedor e validação real de imagem no backend antes de habilitar upload.
-2. Aprovação definitiva e painel completo de campanhas/membros/GM na Parte 3. API atual já autoriza GM legítimo em ficha vinculada, mas não cria vínculos/campanhas fictícios nem concede acesso universal. Compartilhamento entre colegas e transferências de itens ainda pendentes.
+2. Conferir os fluxos com Marcus e o grupo real após configurar a infraestrutura; as contas de teste não criam contas reais. Aprovação/painéis/compartilhamento estão implementados. Transferências de itens continuam futuras.
 3. Conferir manual completo e exemplos com Marcus, especialmente fadiga proposta, dano de armas, exceções, reentrada em crítico, deslocamento e recuperação incompleta de PE.
 4. Repositório privado remoto ainda não criado. O proprietário informou que não existe URL; o commit/bundle local não se sincroniza automaticamente com o PC.
 5. Produção: Render, MySQL gerenciado, TLS real, backups/restauração, monitoramento, carga e política de retenção/anonimização não provisionados/verificados.
 6. Sem fila offline persistente, push em tempo real ou merge automático de texto. Fechar/recarregar ignorando o aviso pode perder rascunho ainda não confirmado; o MySQL continua fonte oficial.
 7. Rate limit permanece em memória por processo: store compartilhado antes de escala horizontal. Rotina agendada de limpeza de sessões/operações e política de retenção precisam ser definidas.
-8. Listagens de fichas/rolagens/convites ainda têm limites; histórico já tem cursor. Histórico com narrativas muito longas e chunk JS ~500,5 kB (~151,6 kB gzip) pedem medição/otimização em staging. O build avisou sobre chunk >500 kB; não é falha de compilação nem prova de meta de latência.
+8. Listagens de fichas/rolagens/convites ainda têm limites; histórico já tem cursor. Histórico com narrativas muito longas e chunk JS ~555,42 kB (~163,58 kB gzip) pedem medição/otimização em staging. O build avisou sobre chunk >500 kB; não é falha de compilação nem prova de meta de latência.
 9. Navegadores físicos, Firefox/WebKit, leitor de tela, auditoria WCAG/contraste completa e testes de carga permanecem pendentes.
 10. Exportação, transferências e modo sessão avançado seguem em entregas posteriores.
 
 ## Continuidade Git
 
-Histórico da Parte 1 preservado e novas alterações registradas em commit da Parte 2. Pacote ZIP inclui código versionado, histórico completo em historico.git.bundle e instruções CONTINUAR_NO_PC.md; não inclui .env, node_modules, dados MySQL, credenciais ou traces. O commit exato consta em ENTREGA.json no pacote.
+Histórico da Parte 1 preservado e histórico da Parte 2 preservado; novas alterações registradas em commit da Parte 3. Pacote sistema-hibrido-parte3.zip inclui código versionado, histórico completo em historico.git.bundle e instruções CONTINUAR_NO_PC.md; não inclui .env, node_modules, dados MySQL, credenciais ou traces. O commit exato consta em ENTREGA.json no pacote.
 
 Extraia o ZIP e execute `git clone historico.git.bundle sistema-hibrido` para recuperar o histórico. Depois de criar remoto privado, `git remote set-url origin <URL>` e `git push -u origin main`. No outro dispositivo, clone esse remoto. O repositório remoto, quando criado, será a referência de continuidade.
+
+
+## Próximos passos no computador
+
+1. Restaurar bundle/commit do pacote, criar remoto privado e publicar o histórico; clonar esse remoto nos demais dispositivos.
+2. Instalar com npm ci; configurar MySQL próprio e segredos pelo .env.example, gerar Prisma e aplicar três migrações com db:deploy. Não copiar o banco/credenciais de teste deste cloud.
+3. Criar primeiro ADMIN por CLI; habilitar Marcus por convite ou conta existente; ele cria campanha e convida o grupo conforme CAMPANHAS.md.
+4. Homologar manual e proposta de fadiga; configurar storage persistente se desejar imagens; ensaiar instalação Prisma limpa, backup/restauração, TLS/Render e carga antes de produção.
+5. Planejar Parte 4: modo sessão, exportação, histórico avançado e refinamentos; depois monitoramento e revisão de segurança/acessibilidade em produção.

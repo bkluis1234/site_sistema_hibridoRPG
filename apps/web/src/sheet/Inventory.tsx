@@ -246,7 +246,12 @@ export function InventoryTable({
             />
           </InputField>
           <InputField label="Observações do item">
-            <textarea {...form.register("notes")} maxLength={4000} rows={2} />
+            <textarea
+              {...form.register("notes")}
+              readOnly={!sheet.access.isOwner}
+              maxLength={4000}
+              rows={2}
+            />
           </InputField>
           <label className="sheet-checkbox">
             <input

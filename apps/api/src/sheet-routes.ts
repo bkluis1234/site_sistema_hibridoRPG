@@ -3,6 +3,7 @@ import type { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import * as schemas from "../../../packages/shared/src/sheet.js";
 import * as service from "./sheet-service.js";
+import { sanitizeHistory } from "./management-service.js";
 export function mountSheetRoutes(
   app: Express,
   db: PrismaClient,
@@ -17,6 +18,7 @@ export function mountSheetRoutes(
         id(req.params.id),
         res.locals.user.id,
         portraitMaxBytes,
+        req.get("X-View-Context") === "gm",
       ),
     }),
   );
@@ -218,13 +220,33 @@ export function mountSheetRoutes(
   });
   app.get("/api/characters/:id/history", auth, async (req, res) => {
     const characterId = id(req.params.id);
-    await service.authorized(db, characterId, res.locals.user.id);
+    const access = await service.authorized(
+      db,
+      characterId,
+      res.locals.user.id,
+    );
+    const visibilities = [
+      "PUBLIC",
+      ...(access.isOwner ? ["PRIVATE"] : []),
+      ...(access.isGM && req.get("X-View-Context") === "gm" ? ["GM_ONLY"] : []),
+    ] as ("PUBLIC" | "PRIVATE" | "GM_ONLY")[];
     const before = req.query.before
       ? z.number().int().positive().parse(Number(req.query.before))
       : undefined;
     const entries = await db.characterAuditLog.findMany({
       where: {
         characterId,
+        OR: [
+          { visibility: { in: visibilities.filter((v) => v !== "GM_ONLY") } },
+          ...(visibilities.includes("GM_ONLY") && access.character.campaignId
+            ? [
+                {
+                  visibility: "GM_ONLY" as const,
+                  campaignScopeId: access.character.campaignId,
+                },
+              ]
+            : []),
+        ],
         ...(before ? { recordVersion: { lt: before } } : {}),
       },
       orderBy: [{ recordVersion: "desc" }, { id: "desc" }],
@@ -232,6 +254,7 @@ export function mountSheetRoutes(
       select: {
         id: true,
         action: true,
+        reason: true,
         recordVersion: true,
         beforeData: true,
         afterData: true,
@@ -240,7 +263,13 @@ export function mountSheetRoutes(
       },
     });
     res.json({
-      entries,
+      entries: access.isOwner
+        ? entries
+        : entries.map((entry) => ({
+            ...entry,
+            beforeData: sanitizeHistory(entry.beforeData),
+            afterData: sanitizeHistory(entry.afterData),
+          })),
       nextBefore: entries.length === 50 ? entries.at(-1)?.recordVersion : null,
     });
   });

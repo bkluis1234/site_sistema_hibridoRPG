@@ -22,15 +22,15 @@ Os 17 modelos solicitados e privilege_invites estão no schema. Audit logs são 
 - GlobalRole: ADMIN ou PLAYER. O ADMIN continua podendo criar personagens próprios.
 - `canCreateCampaigns`: habilitação global de criação, concedida por convite de mestre ou CLI do ADMIN inicial.
 - CampaignMember.role: GM ou PLAYER por campanha. Habilitação global não autoriza ler/editar fichas de todas as campanhas.
-- Rotas legadas mantêm propriedade. Rotas detalhadas da Parte 2 autorizam dono ou GM vinculado à campanha ativa. ADMIN sem vínculo não acessa fichas de terceiros. Compartilhamento com colegas/painel de campanhas permanecem na Parte 3.
+- Rotas legadas mantêm propriedade. Rotas detalhadas da Parte 2 autorizam dono ou GM vinculado à campanha ativa. ADMIN sem vínculo não acessa fichas de terceiros. Compartilhamento com colegas usa DTO PUBLIC e dupla autorização; painel GM exige contexto e vínculo ativos.
 - DTOs estritos não aceitam ownerId, role, status, atributos ou permissões vindos do navegador.
-- Projeções explícitas evitam envio de passwordHash, recovery_codes e hashes de convites. Segredos futuros do mestre exigirão projeções diferentes e testes de ausência de campos.
+- Projeções explícitas evitam envio de passwordHash, recovery_codes e hashes de convites. Segredos do mestre são projetados apenas no contexto GM; testes verificam ausência de campos em respostas de dono/colega/ADMIN.
 
 ## Credenciais e sessões
 
 Senhas de 12–128 caracteres, Argon2id (64 MiB, t=3, p=1). Não há e-mails nem e-mails artificiais. Login é minúsculo; nome de personagem é independente. Mensagem de falha de login é genérica; custo de verificação para usuário inexistente usa hash de referência. Conflito no cadastro pode revelar que um login existe, aceitável para nomes públicos únicos; recuperação tem mensagem genérica.
 
-Sessão: 32 bytes aleatórios, só SHA-256 do segredo no banco (não se aplica a senhas). Cookie HttpOnly, SameSite=Lax, Secure e prefixo __Host em produção, sem Domain. Expiração absoluta 7 dias e inatividade 12h, ambas verificadas no servidor. Login rotaciona a sessão do navegador; logout apaga sessão; recuperação revoga todas. Sem tokens de autenticação no localStorage. TanStack mantém apenas dados públicos em memória. Respostas API usam Cache-Control:no-store.
+Sessão: 32 bytes aleatórios, só SHA-256 do segredo no banco (não se aplica a senhas). Cookie HttpOnly, SameSite=Lax, Secure e prefixo __Host em produção, sem Domain. Expiração absoluta 7 dias e inatividade 12h, ambas verificadas no servidor. Login rotaciona a sessão do navegador; logout apaga sessão; recuperação revoga todas. Sem tokens de autenticação no localStorage. TanStack mantém dados autorizados em memória, com chaves separadas por contexto e limpeza ao trocar sessão. Respostas API usam Cache-Control:no-store.
 
 CSRF: token aleatório assinado HMAC-SHA256, cookie HttpOnly, valor retornado por GET `/auth/csrf`; frontend envia em X-CSRF-Token. Todas as mutações, inclusive login/cadastro/logout, exigem igualdade com cookie, assinatura válida e Origin exata configurada. Nenhum CORS permissivo é habilitado. SameSite é camada adicional. CSRF_SECRET deve ter pelo menos 32 caracteres aleatórios e ser configurado fora do código.
 
@@ -50,13 +50,22 @@ A Parte 2 implementa autosave textual com debounce de 850 ms e operações imedi
 
 ## Limites antes da produção
 
-HTTPS/TLS reais, banco gerenciado, restauração, carga, acessibilidade completa e browsers adicionais precisam ser verificados em staging. Backups e monitoramento não são criados pela existência de docs. Ainda faltam gestão completa de contas, campanhas e aprovações. Mecânicas explícitas da Parte 2 foram implementadas; o manual completo e exemplos homologados por Marcus continuam pendentes.
+HTTPS/TLS reais, banco gerenciado, restauração, carga, acessibilidade completa e browsers adicionais precisam ser verificados em staging. Backups e monitoramento não são criados pela existência de docs. Gestão de contas, campanhas e aprovações está integrada na Parte 3; detalhes em CAMPANHAS.md, PERMISSOES.md e ADMINISTRACAO.md. Mecânicas explícitas da Parte 2 foram implementadas; o manual completo e exemplos homologados por Marcus continuam pendentes.
 
 
 ## Ampliação da Parte 2
 
 Ficha, regras e API foram acrescentadas sem recriar a autenticação. sheet-routes.ts valida DTOs e sheet-service.ts autoriza/serializa transações. Cada domínio tem versão independente e Character.version mantém a sequência de auditoria. operationId/requestHash preserva idempotência e protege gasto duplo. CSRF no navegador usa inicialização compartilhada entre requests simultâneos.
 
-As rotas detalhadas autorizam proprietário ou GM de campanha ativa, nunca ADMIN universal. Só GM vinculado configura política de fadiga e autoriza repetição contextual. Operações legadas permanecem limitadas ao proprietário. Não há endpoint público de aprovação definitiva.
+As rotas detalhadas autorizam proprietário ou GM de campanha ativa, nunca ADMIN universal. Só GM vinculado configura política de fadiga e autoriza repetição contextual. Operações legadas permanecem limitadas ao proprietário. Aprovação é uma operação autenticada de GM responsável, com comentário e versão.
 
 Novas tabelas: character_condition_states, character_operations e dice_rolls; modelos existentes ampliados para narrativas, espaços/equipamentos e antes/depois em auditoria. Máximos são derivados. Ver FICHA_DIGITAL.md e migração 202610300002_interactive_sheet.
+
+
+## Ampliação da Parte 3
+
+management-routes.ts concentra contratos e limites das rotas; management-service.ts implementa autorização transacional e casos de uso. administration serializa mudanças globais pelo registro de configuração. Gestão usa UUID único por ator, hash do pedido e resultado sem códigos secretos. Campanhas são bloqueadas antes de membros/convites; fichas serializam operações mecânicas por registro. Antes de servir resultado repetido, a autorização é revalidada.
+
+Novos modelos: CampaignAuditLog, CharacterNote com escopo GM, Notification, ManagementOperation, AdminAuthorization e PlatformSettings. Modelos existentes ganham estados de vínculo/campanha, limites de convite, preferências de compartilhamento e visibilidade/justificativa dos logs. SQL preserva registros anteriores e mantém conteúdo fechado por padrão. FK de escopo da nota usa ON UPDATE RESTRICT para compatibilidade com CHECK no MySQL 8.4.
+
+Privacidade é aplicada ao construir resposta e histórico, sem confiar em esconder campos no React. PUBLIC não é acesso anônimo. PRIVATE pertence ao dono; GM_ONLY requer vínculo e origem. Operador de infraestrutura pode acessar dados; proteção contra spoilers não é absoluta. Notificações/consultas usam polling 30 s e invalidação; WebSocket fica para evolução futura.
