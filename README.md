@@ -21,7 +21,7 @@ docs                 Requisitos, decisões, operação e progresso
 ## Instalar e executar
 
 1. Instale Git, Node 24 e MySQL 8.4 (ou Docker Compose para desenvolvimento).
-2. Clone o repositório quando houver uma URL remota, ou extraia o pacote de transferência. Entre na pasta do projeto.
+2. Com acesso autorizado, clone `https://github.com/bkluis1234/site_sistema_hibridoRPG.git` após a publicação do histórico, ou extraia o pacote de transferência. Entre na pasta do projeto.
 3. Execute `npm ci` e `cp .env.example .env` (no PowerShell: `Copy-Item .env.example .env`). Preencha segredos locais, a URL MySQL e a origem web. Use senha de banco dedicada, diferente da senha dos usuários da aplicação.
 4. Gere `CSRF_SECRET`: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` e coloque o resultado somente no `.env`.
 5. Se usar Compose, preencha também `MYSQL_PASSWORD` e `MYSQL_ROOT_PASSWORD`; execute `docker compose -f compose.dev.yml up -d`. Faça a senha em DATABASE_URL coincidir com MYSQL_PASSWORD. A URL exige codificação de caracteres especiais.
@@ -83,4 +83,8 @@ SSE usa a mesma origem/cookies, sem token na URL ou biblioteca nova. Se a conex�
 - [Informações pendentes do manual](docs/PENDENCIAS_MANUAL.md)
 - [Resultados de validação](docs/VALIDACAO.md)
 
-Ainda não existe repositório remoto fornecido pelo proprietário. Um commit local e o pacote de transferência não se sincronizam automaticamente com o PC. Após criar um repositório vazio privado, execute `git remote add origin <URL>` (ou `git remote set-url origin <URL>` se clonou o bundle) e `git push -u origin main`; no PC, clone essa URL. Nunca envie `.env`, dumps, códigos de recuperação ou arquivos de relatório com credenciais.
+O proprietário criou o repositório privado [bkluis1234/site_sistema_hibridoRPG](https://github.com/bkluis1234/site_sistema_hibridoRPG). O remote `origin` foi configurado nesta cópia, na branch `main`, preservando os quatro commits anteriores. Em 31/10/2026, a leitura remota e o fetch retornaram HTTP 403; a API retornou 404 para o repositório privado. A sessão GitHub está autenticada, mas o acesso efetivo a este repositório não está disponível. **Push não realizado; divergência remota não verificável.**
+
+Habilite o acesso ao novo repositório privado nas permissões da integração GitHub usada pelo Codex. Depois, execute `git fetch origin` e compare os históricos antes de `git push -u origin main`: se `origin/main` existir, `git merge-base --is-ancestor origin/main main` deve confirmar avanço direto, ou será necessário conciliar as alterações preservando ambos os históricos. Nunca use force push. Só após confirmar o envio, clone no PC e conecte a branch `main` ao Render, seguindo [o guia de publicação](docs/PUBLICACAO.md). Um commit local não se sincroniza automaticamente. Nunca envie `.env`, dumps, códigos de recuperação ou arquivos de relatório com credenciais.
+
+A Parte 5 está em andamento: [auditoria inicial e pendências](docs/AUDITORIA_FINAL.md). Seus textos de referência foram preservados, sem declarar implementadas as funcionalidades solicitadas. Render e MySQL gerenciado ainda não foram provisionados.

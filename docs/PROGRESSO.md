@@ -1,6 +1,6 @@
 # Progresso — Sistema Híbrido 2.6
 
-Atualizado em 31/10/2026 UTC. Versão da aplicação: 0.4.0. Partes 1/2/3 auditadas antes de implementar o Modo Sessão. Referências: imagem oficial e texto explícito da Parte 2; Manual completo ainda pendente. Sem publicação em produção ou repositório remoto configurado.
+Atualizado em 31/10/2026 UTC. Versão da aplicação: 0.4.0. Partes 1/2/3 auditadas antes de implementar o Modo Sessão. Referências: imagem oficial e texto explícito da Parte 2; Manual completo ainda pendente. Sem publicação em produção. Repositório privado informado e origin configurado; push bloqueado por falta de acesso efetivo ao remoto.
 
 ## Arquitetura adotada
 
@@ -73,7 +73,7 @@ Entrada da Parte 4: 51 unitários, 60 integrações MySQL e 14 E2E desktop/mobil
 1. Storage externo persistente de retrato: UI é prévia local; não salva imagem no banco ou no disco temporário do Render. Configurar provedor e validação real de imagem no backend antes de habilitar upload.
 2. Conferir os fluxos com Marcus/grupo real após configurar a infraestrutura. Aprovação/painéis/compartilhamento e Modo Sessão estão integrados. Transferências são optativas, desativadas por padrão até aprovação explícita na campanha.
 3. Conferir manual completo e exemplos com Marcus, especialmente fadiga proposta, dano de armas, exceções, reentrada em crítico, deslocamento e recuperação incompleta de PE.
-4. Repositório privado remoto ainda não criado. O proprietário informou que não existe URL; o commit/bundle local não se sincroniza automaticamente com o PC.
+4. Repositório privado criado: https://github.com/bkluis1234/site_sistema_hibridoRPG.git. Origin configurado, mas leitura/fetch negados (HTTP 403; API 404). Sem push e sem confirmação da divergência; habilitar acesso da integração ao repositório antes de publicar. O commit/bundle local não se sincroniza automaticamente com o PC.
 5. Produção: Render, MySQL gerenciado, TLS real, backups/restauração, monitoramento, carga e política de retenção/anonimização não provisionados/verificados.
 6. SSE/fallback em sala; sem fila offline persistente ou merge automático de texto. Fechar/recarregar ignorando o aviso pode perder rascunho ainda não confirmado; o MySQL continua fonte oficial.
 7. Rate limit permanece em memória por processo: store compartilhado antes de escala horizontal. Rotina agendada de limpeza de sessões/operações e política de retenção precisam ser definidas.
@@ -85,16 +85,26 @@ Entrada da Parte 4: 51 unitários, 60 integrações MySQL e 14 E2E desktop/mobil
 
 Histórico das Partes 1/2/3 preservado; novas alterações registradas em commit da Parte 4. Pacote sistema-hibrido-parte4.zip inclui código versionado, histórico completo em historico.git.bundle e instruções CONTINUAR_NO_PC.md; não inclui .env, node_modules, dados MySQL, credenciais ou traces. O commit exato consta em ENTREGA.json no pacote.
 
-Extraia o ZIP e execute `git clone historico.git.bundle sistema-hibrido` para recuperar o histórico. Depois de criar remoto privado, `git remote set-url origin <URL>` e `git push -u origin main`. No outro dispositivo, clone esse remoto. O repositório remoto, quando criado, será a referência de continuidade.
+Extraia o ZIP e execute `git clone historico.git.bundle sistema-hibrido` para recuperar o histórico. Nessa cópia restaurada, confira o origin antes de apontá-lo para `https://github.com/bkluis1234/site_sistema_hibridoRPG.git`. Nesta cópia do Codex, origin já está configurado. Após liberar o acesso, faça fetch e confira o histórico remoto antes de um push normal, sem force. No outro dispositivo, clone o remoto somente após confirmar a publicação do código.
 
 
 ## Próximos passos no computador
 
-1. Restaurar bundle/commit do pacote, criar remoto privado e publicar o histórico; clonar esse remoto nos demais dispositivos.
-2. Instalar com npm ci; configurar MySQL próprio e segredos pelo .env.example, gerar Prisma e aplicar três migrações com db:deploy. Não copiar o banco/credenciais de teste deste cloud.
+1. Habilitar o acesso GitHub ao novo repositório privado, fazer fetch, conferir divergências e publicar main sem force; clonar esse remoto nos demais dispositivos após confirmar o push. O bundle continua disponível como alternativa de transferência.
+2. Instalar com npm ci; configurar MySQL próprio e segredos pelo .env.example, gerar Prisma e aplicar quatro migrações com db:deploy. Não copiar o banco/credenciais de teste deste cloud.
 3. Criar primeiro ADMIN por CLI; habilitar Marcus por convite ou conta existente; ele cria campanha e convida o grupo conforme CAMPANHAS.md.
 4. Homologar manual e proposta de fadiga; configurar storage persistente se desejar imagens; ensaiar instalação Prisma limpa, backup/restauração, TLS/Render e carga antes de produção.
-5. Planejar Parte 5: homologação integral, publicação, backups/restauração, monitoramento, desempenho/segurança/acessibilidade; exportação e ferramentas adicionais dependem do escopo aprovado.
+5. Continuar Parte 5 a partir de AUDITORIA_FINAL.md: correções de segurança, identidade Origem, ajuda/tutoriais, requisitos e homologação integral; publicação, backups/restauração, monitoramento, desempenho/acessibilidade continuam pendentes.
+
+## Registro inicial da Parte 5 e preparação do GitHub
+
+Somente documentação acrescentada nesta etapa: duas referências integrais da Parte 5 e relatório de auditoria inicial. Nenhuma funcionalidade solicitada da Parte 5 foi declarada concluída. Regressão da aplicação existente: 78 unitários, 90 integrações MySQL e 18 E2E aprovados; typecheck/build passaram, com aviso de bundle >500 kB. Ensaio local adicional confirmou persistência após reiniciar MySQL/API e negou acesso ao segundo cliente; limpeza sintética concluída. Não foram instaladas dependências nem executadas novas migrações nesta etapa.
+
+Antes de preparar o commit, foram examinados os quatro commits existentes (190 blobs históricos), os arquivos versionados e os três documentos pendentes com padrões de tokens, chaves privadas e credenciais literais. Os resultados foram revisados: exemplos usam placeholders, testes usam valores sintéticos e as quatro migrações SQL são schema/dados de evolução, não dumps de jogadores. Nenhuma credencial real foi identificada nessa verificação; ela não constitui garantia exaustiva. `.env` e `.env.test` estão ignorados e nunca constaram nos históricos examinados; apenas `.env.example` e `.env.test.example` estão versionados. Não houve exclusão de arquivos ou reescrita do histórico.
+
+GitHub CLI reconhece a conta do proprietário, mas Git/API não permitem acessar este repositório privado. Não foi possível verificar os commits remotos ou a existência/divergência de main. Nenhum push foi realizado. Liberar acesso ao repositório é a próxima dependência; conectar ao Render e prover MySQL externo só vêm após o envio confirmado e a resolução dos bloqueios de produção.
+
+Verificação deste registro documental: `npm test` repetido com 78 testes aprovados; `git diff --cached --check` sem erros. Revisão final dos cinco documentos preparados sem padrões de credenciais reais identificados. Integração/E2E/build não foram repetidos nesta alteração exclusivamente documental; os resultados acima pertencem à auditoria anterior da mesma versão da aplicação.
 
 
 ## Funcionalidades acrescentadas na Parte 4
