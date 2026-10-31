@@ -1,5 +1,7 @@
 # Checkpoint de encerramento — Parte 5 do Origem
 
+**Documento histórico da pausa.** A retomada posterior e seus resultados ficam em [PROGRESSO.md](PROGRESSO.md) e [AUDITORIA_FINAL.md](AUDITORIA_FINAL.md); as informações abaixo registram exatamente o estado de ad71bde.
+
 31/10/2026 UTC. **EM ANDAMENTO. A Parte 5 não foi concluída.** Trabalho pausado a pedido do proprietário; não executar deploy ou novas rodadas longas sem retomar a tarefa. Nenhuma alteração foi descartada. Versão 0.5.0 indica desenvolvimento, não aprovação de produção.
 
 ## Git e continuidade

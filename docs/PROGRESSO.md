@@ -1,8 +1,8 @@
-# Progresso — Origem 0.5.0 / checkpoint da Parte 5
+# Progresso — Origem 0.5.0 / retomada da Parte 5
 
-**PARTE 5 EM ANDAMENTO, pausada a pedido do proprietário.** Retomar por [CHECKPOINT_PARTE5.md](CHECKPOINT_PARTE5.md). Não há declaração de conclusão ou deploy.
+**Retomada autorizada em 31/10/2026 (America/Sao_Paulo).** **PRONTO COM RESSALVAS:** auditoria e regressão locais concluídas; infraestrutura/homologação externas ainda pendentes. Não houve deploy. O estado da pausa foi preservado como histórico em [CHECKPOINT_PARTE5.md](CHECKPOINT_PARTE5.md).
 
-Atualizado em 31/10/2026. Produto: Origem. Sistema de RPG: Sistema Híbrido 2.6. Base da auditoria: ce85c372fe1101ae0c19ee64a299c4e189cd20d8, com cinco commits anteriores preservados e publicados. O histórico detalhado das Partes 1–4 foi preservado em HISTORICO_PROGRESSO_PARTES_1_4.md. A referência atual é referencias/PARTE5_DEFINITIVA.md; os prompts anteriores permanecem arquivados como solicitações, não evidências de conclusão.
+Atualizado em 31/10/2026. Produto: Origem. Sistema de RPG: Sistema Híbrido 2.6. Base da auditoria: ce85c372fe1101ae0c19ee64a299c4e189cd20d8, com cinco commits anteriores preservados e publicados. O histórico detalhado das Partes 1–4 foi preservado em HISTORICO_PROGRESSO_PARTES_1_4.md. As referências são referencias/PARTE5_DEFINITIVA.md e referencias/RETOMADA_PARTE5.md; os prompts anteriores permanecem arquivados como solicitações, não evidências de conclusão.
 
 ## Arquitetura e funcionalidades preservadas
 
@@ -24,7 +24,7 @@ Monorepositório npm com React 19/TypeScript/Vite/Tailwind, TanStack Query/RHF/Z
 
 Cinco migrações versionadas: foundation, interactive_sheet, campaign_management, game_sessions e security_and_help. A quinta acrescenta expiresAt opcional a recovery_codes e tutorial_progress, com FK e unicidade por usuário/guia. Aplicada no MySQL de teste existente sem reset; nenhum banco real foi alterado. Ensaios finais de instalação desde vazio, TLS, persistência e restauração são detalhados em AUDITORIA_FINAL.md.
 
-Nenhuma dependência runtime nova nem atualização indiscriminada de major. Versões exatas seguem o package-lock.json. Prettier é ferramenta temporária de formatação, não uma dependência runtime adicionada. Scripts novos: security:secrets, db:check, audit:database, audit:load e audit:load:compiled (Linux, backend em processo separado). Nenhuma contratação, conta de produção, analytics ou upload externo.
+Nenhuma dependência runtime nova nem atualização indiscriminada de major. Versões exatas seguem o package-lock.json. Prettier é ferramenta temporária de formatação, não uma dependência runtime adicionada. Scripts de auditoria: security:secrets, db:check, audit:database, audit:load e audit:load:compiled (Linux, backend em processo separado). O preload audit-runtime.mjs mede memória/streams somente em teste/IPC, sem endpoint. Nenhuma dependência adicional foi instalada na retomada. Nenhuma contratação, conta de produção, analytics ou upload externo.
 
 ## Comandos de execução e validação
 
@@ -42,31 +42,32 @@ npm run security:secrets
 npm run test:e2e
 npm run db:check
 npm run audit:database
-npm run audit:load -- 300
+npm run audit:load:compiled -- 300
 ```
 
 Integração/E2E/carga exigem NODE_ENV=test e banco dedicado terminado em _test. O ensaio audit:database cria somente um contêiner MySQL local aleatório, com porta em loopback, e o remove ao terminar; requer Docker e OpenSSL. Não pode ser apontado a um provedor de produção. No cloud atual, Chromium está em /workspace/.cache/ms-playwright; use PLAYWRIGHT_BROWSERS_PATH nesse caminho. No PC/CI instale Chromium pelo Playwright.
 
-## Evidências e estado real
+## Evidências e estado real da retomada
 
-Antes das correções: 78 unitários e 90 integrações reais MySQL passaram; typecheck/build aprovados, bundle inicial de 560,09 kB. Resultados finais, comandos e falhas intermediárias ficam em AUDITORIA_FINAL.md. Não confundir testes locais com execução GitHub Actions ou homologação em Render/Aiven.
+O checkpoint ad71bde52a06ca99efcb402d6478f5494cda2a82 foi conferido localmente e no GitHub, limpo e sem divergência. Nenhum arquivo ou commit foi perdido. Os cinco commits originais e o checkpoint permanecem ancestrais do trabalho atual. Commits novos e sincronização são confirmados ao encerrar, sem force push.
 
-Git remoto tornou-se público e o push dos cinco commits originais foi confirmado. As alterações desta etapa foram preparadas para um único commit de checkpoint solicitado pelo proprietário; conferir o hash e a sincronização no Git e no relatório da conversa. Não confundir checkpoint com aprovação final. Nenhum force push, reset de produção ou deploy automático autorizado.
+- 91 unitários em sete arquivos aprovados, incluindo os quatro casos do medidor; typecheck aprovado agora também para scripts TypeScript; sintaxe JavaScript dos dois scripts de instrumentação validada. Lint não está configurado.
+- 95 integrações reais MySQL aprovadas. 20 execuções E2E aprovadas novamente (10 cenários × dois perfis). Total da regressão: 206 (91 + 95 + 20).
+- Build de produção aprovado, principal 472,63 kB / gzip 145,59 kB. Node 24.19.0/npm 11.9.0. Schema validado, cinco migrações atualizadas e migrate diff sem diferenças no banco preservado.
+- Banco isolado: TLS obrigatório, migrações desde vazio, CA inválida rejeitada por API e Prisma, restart, backup AES-256-GCM/restauração e dados de ficha/tutorial via API aprovados. Smoke do servidor compilado em NODE_ENV=production passou localmente, com prontidão e proteção de rotas; não é prova de HTTPS no provedor.
+- Medidor salvo no checkpoint foi reforçado por conjuntos esperados por evento/cliente. Duplicatas, sinais de clientes desconhecidos e eventos de preparação não mascaram perdas. Mantidos 400/400 e metas p95.
+- Carga compilada com old space 192 MiB APROVADA: 20 fichas/streams, 6.000 leituras, zero erros, 400/400 sinais, sem pares ausentes; p95 REST 265,66 ms / SSE 2.024,04 ms. RSS pico do backend 318,83 MiB; heapUsed pico 110,41 MiB; heapTotal pico 192,84 MiB; externa pico 15,30 MiB. Limite total V8 informado: 384 MiB (diferente do old space).
+- Após desconexões e cinco segundos: zero streams; RSS 318,83 MiB, heapUsed 54,56 MiB e externa 8,59 MiB. Encerramento com saída 0, PID ausente, sem OOM/reinício. Não se forçou GC; RSS retido e cinco minutos de ensaio não provam ausência de vazamento nem capacidade real do Render Free.
+- Rodada antiga 399/400 continua REPROVADA; repetição 143 antiga continua INTERROMPIDA. Não reclassificadas. Nova rodada aprovada fornece evidência do estado atual, não da causa de toda a subcontagem antiga.
+- npm audit voltou a reportar zero vulnerabilidades conhecidas. Scanner próprio e revisão de arquivos/histórico continuam com limites descritos em SEGURANCA.md. CI remota ainda sem execução aprovada.
 
-## Resultados preservados no checkpoint
-
-- Aprovados: 89 unitários (repetidos ao encerrar), typecheck (repetido), 95 integrações MySQL e 20 execuções E2E (10 cenários em dois perfis), build, geração/validação Prisma e aplicação da quinta migração em teste. Total de regressão: 204 execuções, sem somar repetições.
-- Banco isolado: cinco migrações desde vazio, TLS válido/CA inválida rejeitada, restart, backup cifrado/restauração e smoke do servidor compilado com flags de produção aprovados localmente.
-- Carga sem heap restrito aprovada: 20 usuários/6.000 leituras/400 sinais, backend compilado com pico RSS 449 MiB; medição mista cliente+servidor chegou a 531 MiB e não representa backend isolado.
-- Carga com old space 192 MiB: pico RSS 320 MiB, zero erros HTTP, mas 399/400 sinais; rodada REPROVADA. Medidor SSE corrigido para entregas antecipadas/duplicatas, dois unitários aprovados; repetição de cinco minutos INTERROMPIDA a pedido (SIGTERM/143), sem resultado final. Exigência de 400/400 mantida.
-- Processos de carga e servidor encerrados; somente as 20 fixtures sintéticas da rodada interrompida foram limpas do banco dedicado. Contêiner MySQL de teste foi parado preservando seus dados/volume. Nenhum arquivo de projeto ou commit descartado.
-- Segredos: verificador próprio passou antes do checkpoint; limites em SEGURANCA.md. Auditoria npm consultada sem vulnerabilidades conhecidas. CI remota ainda não validada.
+Métricas resumidas sem credenciais: EVIDENCIAS_PARTE5.json; método: DESEMPENHO.md; relatório: AUDITORIA_FINAL.md. Resultados antigos de 78 unitários/90 integrações e histórico das Partes 1–4 permanecem nos documentos históricos. Não somar repetições como novos testes.
 
 ## Pendências e próximos passos
 
-0. Retomar o ensaio `npm run audit:load:compiled -- 300` com medidor corrigido, em ambiente isolado, e só aceitar se 400/400, zero erros e metas p95 forem atendidas. Revisar RSS separado e finalizar a revisão da Parte 5 antes de classificá-la como pronta.
+0. Conferir resultado efetivo da CI após push; não confundir verificações locais aprovadas com homologação em Render/Aiven. Relatório local concluído com classificação PRONTO COM RESSALVAS.
 
-1. Proprietário: confirmar aceitação das limitações/custos dos planos Free, criar MySQL Aiven e serviço Render manualmente, configurar CA/usuários/privilégios/segredos. Os comandos exatos estão em PUBLICACAO.md.
+1. Proprietário: confirmar aceitação das limitações/custos dos planos Free, criar MySQL Aiven e serviço Render manualmente, configurar CA/usuários/privilégios/segredos. Os comandos exatos estão em PUBLICACAO.md. Render Free foi reconferido (0,1 CPU/512 MB); páginas Aiven retornaram HTTP 403 nesta retomada, então confirmar oferta/limites no painel.
 2. Antes de jogadores reais: smoke tests HTTPS/cookies/proxy/SSE/cold start, backup e restauração no provedor, desempenho/memória no plano escolhido, responsáveis por incidentes e canal privado de segurança.
 3. Marcus: homologar o manual completo, a proposta de fadiga e exceções ainda não fornecidas. Nenhuma regra de outro sistema foi adicionada.
 4. Provedor de retratos não definido: seletor continua apenas prévia local. Exportação de fichas e novas versões de regras seguem previstas, sem funcionalidade fictícia.

@@ -1,6 +1,6 @@
 # Origem — Plataforma de RPG
 
-Plataforma da campanha de Marcus, utilizando as regras do **Sistema Híbrido 2.6**. Versão 0.5.0 em desenvolvimento (checkpoint da Parte 5): contas, fichas, campanhas e Modo Sessão preservados; autenticação/TLS/SSE reforçados, interface Origem em português brasileiro e Central de Ajuda com progresso persistente. Frontend e API usam a mesma origem. **Parte 5 não concluída.** O ponto exato de retomada está em [docs/CHECKPOINT_PARTE5.md](docs/CHECKPOINT_PARTE5.md); a auditoria parcial e seus limites estão em [docs/AUDITORIA_FINAL.md](docs/AUDITORIA_FINAL.md).
+Plataforma da campanha de Marcus, utilizando as regras do **Sistema Híbrido 2.6**. Versão 0.5.0, retomada da Parte 5: contas, fichas, campanhas e Modo Sessão preservados; autenticação/TLS/SSE reforçados, interface Origem em português brasileiro e Central de Ajuda com progresso persistente. Frontend e API usam a mesma origem. O estado atual e as ressalvas ficam em [docs/PROGRESSO.md](docs/PROGRESSO.md) e [docs/AUDITORIA_FINAL.md](docs/AUDITORIA_FINAL.md). O [checkpoint anterior](docs/CHECKPOINT_PARTE5.md) permanece como histórico.
 
 A imagem oficial e as regras explícitas da Parte 2 foram utilizadas. O manual completo continua pendente de conferência. **Upload persistente de imagens e publicação ainda não estão concluídos.** O seletor de imagem mostra apenas prévia local até configurar storage externo.
 
@@ -21,7 +21,7 @@ docs                 Requisitos, decisões, operação e progresso
 ## Instalar e executar
 
 1. Instale Git, Node 24 e MySQL 8.4 (ou Docker Compose para desenvolvimento).
-2. Com acesso autorizado, clone `https://github.com/bkluis1234/site_sistema_hibridoRPG.git` após a publicação do histórico, ou extraia o pacote de transferência. Entre na pasta do projeto.
+2. Com acesso autorizado, clone `https://github.com/bkluis1234/site_sistema_hibridoRPG.git` e confira a branch main sincronizada. Entre na pasta do projeto.
 3. Execute `npm ci` e `cp .env.example .env` (no PowerShell: `Copy-Item .env.example .env`). Preencha segredos locais, a URL MySQL e a origem web. Use senha de banco dedicada, diferente da senha dos usuários da aplicação.
 4. Gere `CSRF_SECRET`: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` e coloque o resultado somente no `.env`.
 5. Se usar Compose, preencha também `MYSQL_PASSWORD` e `MYSQL_ROOT_PASSWORD`; execute `docker compose -f compose.dev.yml up -d`. Faça a senha em DATABASE_URL coincidir com MYSQL_PASSWORD. A URL exige codificação de caracteres especiais.
@@ -85,6 +85,7 @@ SSE usa a mesma origem/cookies, sem token na URL ou biblioteca nova. Se a conex�
 - [Backup e recuperação](docs/OPERACAO.md)
 - [Informações pendentes do manual](docs/PENDENCIAS_MANUAL.md)
 - [Resultados de validação](docs/VALIDACAO.md)
+- [Medição SSE e memória](docs/DESEMPENHO.md)
 
 O histórico está no [repositório público GitHub](https://github.com/bkluis1234/site_sistema_hibridoRPG), branch main. Os cinco commits originais, incluindo ce85c37, foram publicados e preservados. O problema antigo de acesso foi resolvido; commits e sincronização da Parte 5 devem ser conferidos no relatório Git da entrega. Nunca use force push, envie .env/dumps/traces ou confunda commit publicado com aplicação implantada.
 
@@ -99,3 +100,5 @@ O histórico está no [repositório público GitHub](https://github.com/bkluis12
 A CI preparada executa verificações em MySQL efêmero, sem credenciais reais ou implantação. Não se presume resultado remoto sem workflow concluído. npm ci usa o lockfile; nenhuma dependência runtime foi adicionada nesta etapa. Os exemplos de ambiente contêm somente placeholders.
 
 **Ainda sem deploy público.** O proprietário precisa configurar e autorizar Render/Aiven e validar HTTPS, proxy, memória, desempenho, privilégios e backup no ambiente real. Retrato persistente, exportação de fichas e confirmação do manual completo continuam pendentes. Dados essenciais nunca dependem do disco temporário do Render; não há coleta de localização, analytics ou telemetria externa adicionada.
+
+A carga local compilada da retomada passou com 20 usuários, 6.000 leituras e 400/400 sinais, RSS pico isolado 318,83 MiB e liberação dos streams. Essa medição não garante capacidade/latência no Render Free; homologação de CPU, rede, logins concorrentes, HTTPS, banco e cold start permanece necessária. Nenhum serviço externo ou deploy foi criado.

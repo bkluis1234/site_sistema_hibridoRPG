@@ -38,7 +38,7 @@ Nenhum RNF é declarado integralmente atendido apenas pela escolha de biblioteca
 
 | ID | Requisito | Meta / critério verificável | Evidência e limites |
 |---|---|---|---|
-| RNF-001 | Interface responsiva mobile-first | Testar 360/393/1280 px; layout sem overflow de página e controles de toque ≥ 40 px; melhorar para 44 px onde aplicável. | Playwright desktop/Pixel 7 e inspeção visual; 360 px/teclado pendentes. |
+| RNF-001 | Interface responsiva mobile-first | Testar 360/393/1280 px; layout sem overflow de página e controles de toque ≥ 40 px; melhorar para 44 px onde aplicável. | Playwright desktop/Pixel 7 e cadastro/ajuda em sete larguras 320–1440 px, labels e atalho de teclado verificados; revisão integral de todas as telas/contraste/leitor de tela pendente. |
 | RNF-002 | HTTPS em produção | APP_ORIGIN deve ser HTTPS; proxy Render termina TLS, cookies Secure e HSTS. | Config e flags de cookie testáveis localmente; certificado/redirecionamento reais dependem da publicação. |
 | RNF-003 | Hash apropriado | Argon2id: memória 64 MiB, 3 iterações, paralelismo 1, sal por hash. | Unitário e inspeção do registro MySQL; calibrar custo sob carga no plano Render. |
 | RNF-004 | Persistência relacional | MySQL 8.4, relações, índices, unicidade e migração Prisma versionada. | Integração real MySQL, validação de schema e verificação de migração. |
@@ -52,8 +52,8 @@ Nenhum RNF é declarado integralmente atendido apenas pela escolha de biblioteca
 | RNF-012 | Evolução incremental | Etapas documentadas, regras isoladas e migrações revisáveis. | Inspeção da estrutura; capacidade futura não é garantia de compatibilidade sem testes. |
 | RNF-013 | Acessibilidade | Formulários com labels, descrições/erros associados, foco visível, navegação sem mouse e redução de movimento. | Labels exercitados no E2E; auditoria WCAG AA, contraste integral e leitor de tela pendentes. |
 | RNF-014 | Logs sem credenciais | Logs HTTP somente event/requestId/category; sem body, cookies, hash de senha ou códigos. | Inspeção do logger e projeções testadas; revisão de logs da infraestrutura pendente. CLI exibe segredos somente no terminal seguro intencionalmente. |
-| RNF-015 | Backup/restauração | Meta inicial RPO ≤24h e RTO ≤4h; snapshots + cópia externa cifrada; restauração em ambiente isolado. | Procedimento em OPERACAO.md; nenhuma restauração de produção executada. |
-| RNF-016 | Desempenho mensurável | Meta produção aquecida: p95 leitura ≤500ms, salvamento ≤800ms, login ≤2s com 20 usuários simultâneos; medir 5min na região real. | Testes funcionais não provam a meta; teste de carga/latência em staging pendente; free tier com cold start pode não atender. |
+| RNF-015 | Backup/restauração | Meta inicial RPO ≤24h e RTO ≤4h; snapshots + cópia externa cifrada; restauração em ambiente isolado. | Procedimento em OPERACAO.md e ensaio local cifrado/restauração com API aprovado; nenhuma restauração de produção executada ou RPO/RTO do provedor comprovado. |
+| RNF-016 | Desempenho mensurável | Meta produção aquecida: p95 leitura ≤500ms, salvamento ≤800ms, login ≤2s com 20 usuários simultâneos; medir 5min na região real. | Carga local de leitura/sinais passou (20 usuários, 6.000 leituras, 400/400 SSE; DESEMPENHO.md). Metas de salvamento/login concorrente e região real ainda exigem staging; free tier/cold start podem não atender. |
 | RNF-017 | Testes de regras | Fórmulas exigem casos positivos, limites e exemplos aprovados pelo mestre por versão. | Testes de fórmulas explícitas da Parte 2 passaram; exemplos do manual homologados por Marcus ainda pendentes. |
 | RNF-018 | Instalação/publicação documentadas | Pessoa no PC consegue instalar via npm ci, configurar MySQL e iniciar; Render usa MySQL externo. | README, PUBLICACAO.md e comandos de build verificados no cloud; ensaio em outro PC pendente. |
 | RNF-019 | Ambientes separados | Testes exigem NODE_ENV=test e nome terminado _test; produção exige HTTPS/TLS. | Guarda executada antes de integração/E2E; produção ainda não provisionada. |
@@ -128,7 +128,7 @@ Evidências atuais e limites de execução ficam em VALIDACAO.md. As linhas hist
 | RN-028 | Dupla autorização para compartilhar | P0 | Campanha e dono habilitam; ambos usuários com vínculo ACTIVE | Integração de leitura compartilhada |
 | RN-029 | Segredo pertence à campanha de origem | P0 | GM de outra campanha não recebe notas/logs GM_ONLY antigos | Integração de mudança de campanha |
 | RN-030 | Proteger funções administrativas | P0 | Sem autodesativação/perda de ADMIN; não remover último GM ativo pelo painel de papéis | Integração de autoperda e de preservação do último GM |
-| RN-031 | Registro antigo não vira público | P0 | Migração mantém logs antigos PRIVATE e sharingEnabled=false | SQL versionado e ensaio SQL desde vazio; staging Prisma pendente |
+| RN-031 | Registro antigo não vira público | P0 | Migração mantém logs antigos PRIVATE e sharingEnabled=false | SQL versionado e Prisma migrate deploy desde vazio/TLS aprovados localmente; provedor real pendente |
 
 A fonte integral da Parte 3 está em referencias/PARTE3.md. Situações implementadas descrevem o código e o escopo dos testes indicados; resultados efetivamente executados e infraestrutura ainda pendente estão em VALIDACAO.md.
 

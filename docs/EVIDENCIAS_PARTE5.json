@@ -1,0 +1,227 @@
+{
+  "state": "local_validation_passed_with_reservations",
+  "date": "2026-10-31",
+  "timezone": "America/Sao_Paulo",
+  "checkpointCommit": "ad71bde52a06ca99efcb402d6478f5494cda2a82",
+  "database": {
+    "audit": "isolated_mysql_tls_backup_restore",
+    "status": "passed",
+    "migrations": 5,
+    "freshDeploy": true,
+    "compiledProductionSmoke": true,
+    "prismaTLS": true,
+    "restartPersistence": true,
+    "encryptedBackup": true,
+    "restoredApiPersistence": true,
+    "prismaRejectsUntrustedCA": true,
+    "apiRejectsUntrustedCA": true,
+    "durationMs": 58815
+  },
+  "compiledLoad": [
+    {
+      "audit": "local_load",
+      "users": 20,
+      "seconds": 300,
+      "elapsedMs": 302425,
+      "requests": 6000,
+      "errors": 0,
+      "restP95Ms": 265.660867999999,
+      "sseP95Ms": 2024.0427079999936,
+      "delivered": 400,
+      "expectedSignals": 400,
+      "missingDeliveries": [],
+      "rssDeltaMiB": 140,
+      "rssPeakMiB": 319,
+      "participantsWithCharacters": 20,
+      "metricSource": "compiled_backend_process"
+    },
+    {
+      "audit": "compiled_backend_memory",
+      "status": "passed",
+      "samples": 3140,
+      "phases": {
+        "boot": {
+          "kind": "audit_memory",
+          "phase": "boot",
+          "memory": {
+            "rss": 36020224,
+            "heapTotal": 11792384,
+            "heapUsed": 7934816,
+            "external": 3887066,
+            "arrayBuffers": 146771
+          },
+          "peaks": {
+            "rss": 36020224,
+            "heapUsed": 7934816,
+            "heapTotal": 11792384,
+            "external": 3887066,
+            "arrayBuffers": 146771
+          },
+          "heapSizeLimit": 402653184,
+          "streams": 0,
+          "peakStreams": 0,
+          "uptimeSeconds": 0.055045919
+        },
+        "ready": {
+          "kind": "audit_memory",
+          "phase": "ready",
+          "memory": {
+            "rss": 151703552,
+            "heapTotal": 117608448,
+            "heapUsed": 45577880,
+            "external": 9671971,
+            "arrayBuffers": 3607188
+          },
+          "peaks": {
+            "rss": 176553984,
+            "heapUsed": 45577880,
+            "heapTotal": 117608448,
+            "external": 9671971,
+            "arrayBuffers": 3607188
+          },
+          "heapSizeLimit": 402653184,
+          "streams": 0,
+          "peakStreams": 0,
+          "uptimeSeconds": 0.631510817
+        },
+        "connected": {
+          "kind": "audit_memory",
+          "phase": "connected",
+          "memory": {
+            "rss": 241520640,
+            "heapTotal": 127569920,
+            "heapUsed": 76611800,
+            "external": 10656555,
+            "arrayBuffers": 4591772
+          },
+          "peaks": {
+            "rss": 259293184,
+            "heapUsed": 78087104,
+            "heapTotal": 127569920,
+            "external": 10695697,
+            "arrayBuffers": 4630914
+          },
+          "heapSizeLimit": 402653184,
+          "streams": 20,
+          "peakStreams": 20,
+          "uptimeSeconds": 6.743325539
+        },
+        "clients_disconnected": {
+          "kind": "audit_memory",
+          "phase": "clients_disconnected",
+          "memory": {
+            "rss": 334319616,
+            "heapTotal": 188317696,
+            "heapUsed": 56937080,
+            "external": 9010663,
+            "arrayBuffers": 2951248
+          },
+          "peaks": {
+            "rss": 334319616,
+            "heapUsed": 115772848,
+            "heapTotal": 202211328,
+            "external": 16041291,
+            "arrayBuffers": 9981876
+          },
+          "heapSizeLimit": 402653184,
+          "streams": 0,
+          "peakStreams": 20,
+          "uptimeSeconds": 309.188591109
+        },
+        "after_disconnect_idle": {
+          "kind": "audit_memory",
+          "phase": "after_disconnect_idle",
+          "memory": {
+            "rss": 334319616,
+            "heapTotal": 188317696,
+            "heapUsed": 57208928,
+            "external": 9010721,
+            "arrayBuffers": 2951306
+          },
+          "peaks": {
+            "rss": 334319616,
+            "heapUsed": 115772848,
+            "heapTotal": 202211328,
+            "external": 16041291,
+            "arrayBuffers": 9981876
+          },
+          "heapSizeLimit": 402653184,
+          "streams": 0,
+          "peakStreams": 20,
+          "uptimeSeconds": 314.485299343
+        },
+        "before_shutdown": {
+          "kind": "audit_memory",
+          "phase": "before_shutdown",
+          "memory": {
+            "rss": 334319616,
+            "heapTotal": 188317696,
+            "heapUsed": 57217776,
+            "external": 9010773,
+            "arrayBuffers": 2951358
+          },
+          "peaks": {
+            "rss": 334319616,
+            "heapUsed": 115772848,
+            "heapTotal": 202211328,
+            "external": 16041291,
+            "arrayBuffers": 9981876
+          },
+          "heapSizeLimit": 402653184,
+          "streams": 0,
+          "peakStreams": 20,
+          "uptimeSeconds": 314.685765515
+        },
+        "server_closed": {
+          "kind": "audit_memory",
+          "phase": "server_closed",
+          "memory": {
+            "rss": 334319616,
+            "heapTotal": 188317696,
+            "heapUsed": 57238080,
+            "external": 9010773,
+            "arrayBuffers": 2951358
+          },
+          "peaks": {
+            "rss": 334319616,
+            "heapUsed": 115772848,
+            "heapTotal": 202211328,
+            "external": 16041291,
+            "arrayBuffers": 9981876
+          },
+          "heapSizeLimit": 402653184,
+          "streams": 0,
+          "peakStreams": 20,
+          "uptimeSeconds": 314.786473709
+        }
+      },
+      "peaks": {
+        "rss": 334319616,
+        "heapUsed": 115772848,
+        "heapTotal": 202211328,
+        "external": 16041291,
+        "arrayBuffers": 9981876
+      },
+      "heapSizeLimit": 402653184,
+      "peakStreams": 20,
+      "backendExit": {
+        "code": 0,
+        "signal": null
+      },
+      "processPresentAfterExit": false,
+      "restarts": 0,
+      "interrupted": false
+    }
+  ],
+  "unitTests": 91,
+  "productionDeployed": false,
+  "renderFreeCapacityValidated": false,
+  "regression": {
+    "unit": 91,
+    "integration": 95,
+    "e2eExecutions": 20,
+    "total": 206
+  },
+  "classification": "PRONTO COM RESSALVAS",
+  "remoteCi": "pending"
+}

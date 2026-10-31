@@ -49,3 +49,9 @@ Relatos seguem SECURITY.md. Habilitar divulgação privada do GitHub, designar r
 Login, senha protegida e conteúdo de jogo são os dados necessários; e-mail, localização, tracking e perfilamento não foram acrescentados. Compartilhamento começa restrito conforme configuração da campanha/ficha. O proprietário deve definir finalidade, controlador/operadores, aviso de privacidade, canal para titulares, retenção e atendimento envolvendo menores antes de uso com dados reais. Nenhuma conformidade integral com LGPD é afirmada. Não se fixaram prazos de exclusão irreversível sem aprovação; monitorar crescimento e coordenar limpeza/anonimização com integridade e auditoria.
 
 Validação jurídica/operacional, aparelhos físicos/leitores de tela, produção HTTPS/proxy, TLS Aiven, backup operacional, capacidade Render e revisão do manual com Marcus continuam externos ao ensaio local. Veja AUDITORIA_FINAL.md e MATRIZ_RASTREABILIDADE.md para evidências e pendências.
+
+## Conferência na retomada da Parte 5
+
+O checkpoint ad71bde foi confirmado publicado e preservado. A retomada não identificou outro achado de aplicação além dos cinco controles já tratados no checkpoint; isso descreve o escopo revisado, não ausência absoluta de vulnerabilidades. Login/recuperação, papel global/vínculo GM, CSRF/cookies, filtros de ficha/eventos/rolagens, rate limits, transporte estrito e tratamento de erros foram reconferidos contra código e testes existentes.
+
+O ensaio SSE foi reforçado por pares evento/cliente e aprovou 400/400 em cinco minutos. Instrumentação de memória é um preload exclusivo de teste com IPC: não é importada pelo start:render, recusa execução fora de NODE_ENV=test/IPC e não expõe rota HTTP. Saída/zero streams foram verificados; não existe certificação de ausência de vazamento ou de capacidade Free. Ver DESEMPENHO.md.

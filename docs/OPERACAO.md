@@ -37,7 +37,7 @@ Antes de migração: backup verificado, revisão do SQL e staging. Se uma migra�
 
 ## Sessões e compatibilidade da Parte 4
 
-O backup completo agora inclui as 33 tabelas, também rolagens/eventos/notas/presença e transferências; conteúdo narrativo privado exige a mesma proteção dos demais dados. Testar restauração consistente em staging antes de produção; nenhuma restauração de produção foi executada aqui.
+O backup da Parte 4 incluía 33 tabelas; a Parte 5 acrescenta tutorial_progress, totalizando 34. O backup completo inclui também rolagens/eventos/notas/presença e transferências; conteúdo narrativo privado exige a mesma proteção dos demais dados. Testar restauração consistente em staging antes de produção; nenhuma restauração de produção foi executada aqui.
 
 Depois de criar rolagens de sessão com visibilidade reservada, não executar a API 0.3 contra esse banco: consultas legadas daquela versão ainda não conhecem o filtro de sala. Uma reversão precisa de estratégia compatível de aplicação/dados; não basta trocar o código e manter novos dados secretos acessíveis a consultas antigas. Na publicação, encerrar instâncias antigas e conferir a versão nova antes de liberar o grupo no Modo Sessão. Ensaiar esse procedimento na Parte 5, sem excluir histórico para contornar o problema.
 
@@ -57,3 +57,7 @@ Exporte com `mysqldump --defaults-extra-file=C:/seguro/mysql-backup.cnf --single
 Cifre antes de copiar ao armazenamento restrito: por exemplo, 7-Zip instalado localmente, formato 7z com AES-256 e nomes cifrados, senha forte solicitada interativamente (`7z a -t7z -mhe=on -p C:/seguro/backup.7z C:/seguro/backup.sql`). Não coloque a senha no argumento -p. Confira listagem e extração em pasta temporária privada, calcule `Get-FileHash C:/seguro/backup.7z -Algorithm SHA256`, teste importação em banco isolado com cliente MySQL e só então remova o plaintext temporário de forma coordenada. Defina como guardar a chave/senha separadamente e recuperar acesso se o operador estiver ausente. Nenhum armazenamento externo foi contratado ou acessado por esta tarefa.
 
 O plano Free do Render não oferece shell ou cron de operação. Agendamento de backup precisa de computador/infraestrutura sob responsabilidade do proprietário e não pode depender da instância suspensa do web service. Não prometer backup diário se esse agendamento ainda não existe.
+
+## Carga e desligamento na retomada
+
+O ensaio compilado passou com 400/400 sinais, RSS pico 318,83 MiB e liberação dos 20 streams. A instrumentação é exclusiva de teste/IPC, sem endpoint operacional. Após desconexões o RSS pode continuar alocado: isso não significa memória de um processo já encerrado nem prova ausência de vazamento. Método e limites em DESEMPENHO.md. O comando de produção permanece start:render; migrações/administração não são executadas automaticamente no start.

@@ -25,6 +25,8 @@ Condições oficiais consultadas em 31/10/2026; podem mudar. [Render Free](https
 
 [Aiven Free MySQL](https://aiven.io/docs/products/mysql/concepts/mysql-free-tier) informa nó único, 1 CPU, 1 GB RAM, 1 GB disco, backups e até 76 conexões; não há SLA nem VPC. A [página de preços](https://aiven.io/pricing/mysql) indica que a região/nuvem do Free não é escolhida pelo usuário. Confirmar disponibilidade, retenção/recuperação dos backups e política de inatividade no cadastro; não selecionar trial pago por engano.
 
+**Conferência na retomada de 31/10/2026:** Render Free/compute plans foram acessíveis e os limites acima reconfirmados. As páginas Aiven consultadas retornaram HTTP 403 neste ambiente; a oferta Free e seus limites anteriores não puderam ser reconfirmados nesta rodada. O proprietário deve conferi-los no painel antes de criar o banco; não presumir disponibilidade, retenção ou gratuidade.
+
 ## 3. Crie o MySQL — ação manual do proprietário
 
 1. Entre no Aiven Console com sua conta e escolha criar **MySQL**, plano explicitamente **Free**. Pare se só aparecer plano pago.
@@ -119,7 +121,7 @@ Somente depois de revisar ambiente, custos, backup, migrações e administraçã
 
 Confira redirecionamento HTTPS, certificado, cookie Secure/HttpOnly/SameSite e ausência de Domain no __Host; recusa CSRF de outra origem; logout/recuperação; impedimento de editar ficha alheia; convites e contexto GM; rolagens privadas; duas abas com conflito; reinício sem perda de ficha; SSE sem buffering e fallback após desconexão; acesso por teclado/celular. Uma página temporária de cold start não é confirmação de salvamento.
 
-Teste com contas sintéticas em staging e só depois convide pessoas reais. Confirme RSS/CPU sob Argon2, pool, latência e o p95 com 20 usuários por cinco minutos. As métricas locais não comprovam desempenho do Render Free ou a disponibilidade do Aiven. SSE não dispensa reconciliação de estado e não deve ser usado como keep-alive artificial para burlar o plano.
+Teste com contas sintéticas em staging e só depois convide pessoas reais. Confirme RSS/CPU sob Argon2, pool, latência e o p95 com 20 usuários por cinco minutos. O ensaio local compilado com old space 192 MiB passou com 20 fichas/streams, 6.000 leituras, 400/400 sinais e RSS pico 318,83 MiB. HeapUsed pico 110,41 MiB e zero streams após desconexões; método/limites em DESEMPENHO.md. Isso não comprova desempenho do Render Free ou a disponibilidade do Aiven, especialmente sob logins concorrentes e cold start. SSE não dispensa reconciliação de estado e não deve ser usado como keep-alive artificial para burlar o plano.
 
 ## 10. Atualizações, logs e recuperação
 
