@@ -9,10 +9,10 @@ Não reinicie a aplicação, não reescreva funcionalidades existentes e não re
 
 ## 1. Repositório e recuperação do progresso
 
-Projeto: Origem  
-Sistema de regras: Sistema Híbrido 2.6  
-Repositório: https://github.com/bkluis1234/site_sistema_hibridoRPG  
-Branch principal: `main`  
+Projeto: Origem
+Sistema de regras: Sistema Híbrido 2.6
+Repositório: https://github.com/bkluis1234/site_sistema_hibridoRPG
+Branch principal: `main`
 Workspace anterior: `/workspace/sistema-hibrido`
 
 Antes de alterar qualquer arquivo:
